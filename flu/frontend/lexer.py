@@ -1,227 +1,182 @@
-from typing import Literal
-import sys
-import ast
+from string import ascii_letters, digits
+from ..errors import RuntimeResult, SyntaxError
 
 class TokenType:
-    def __init__(self, 
-        type:
-        # End tokens
-        Literal["EOF"]
-        | Literal["Newline"]
-
-        # Tab (WE WANT TO LOOK LIKE PYTHON)
-        | Literal["Tab"]
-
-        # others
-        | Literal["Colon"]
-
-        # numbers and operations
-        | Literal["Number"]
-        | Literal["Identifier"]
-        | Literal["OpenParen"]
-        | Literal["CloseParen"]
-        | Literal["BinaryOperator"]
-
-        # string
-        | Literal["String"]
-
-        # NULL IS THE BEST
-        | Literal["Null"]
-
-        # TRUE + FALSE
-        | Literal["True"]
-        | Literal["False"]
-
-        # variable declaration
-        | Literal["Variable"]
-        | Literal["Let"]
-        | Literal["Constant"]
-
-        # support for variable declaration
-        | Literal["Is"]
-        | Literal["Be"]
-        | Literal["Now"]
-
-        # Comparison logic
-        | Literal["Equals"]
-        | Literal["NotEquals"]
-        | Literal["GreaterThan"]
-        | Literal["SmallerThan"]
-        | Literal["GreaterThanOrEquals"]
-        | Literal["SmallerThanOrEquals"]
-
-        # support for arrays
-        | Literal["OpenBracket"]
-        | Literal["Semi"]
-        | Literal["CloseBracket"]
-
-        # object
-        | Literal["Dot"]
-    ) -> None:
+    def __init__(self, type):
         self.type = type
-
-KEYWORDS = {
-
-    # variable declaration
-    "let": TokenType("Let"),
-    "variable": TokenType("Variable"),
-    "constant": TokenType("Constant"),
-
-    # support for variable declaration
-    "is": TokenType("Is"),
-    "be": TokenType("Be"),
-    "now": TokenType("Now"),
-
-    # NULL
-    "null": TokenType("Null"),
-
-    # boolean
-    "true": TokenType("True"),
-    "false": TokenType("False"),
-}
-
-TT_KEYWORDS = [tt.type for tt in KEYWORDS.values()]
-
-END_TOKENS = {
-    "EOF",
-    "Newline"
-}
-
-INDENTATION = 4
+    
+    def __repr__(self):
+        return f"(TOKEN TYPE {self.type})"
 
 class Token:
-    def __init__(self, type: TokenType, value: str = "") -> None:
+    def __init__(self, type, value):
         self.type = type
         self.value = value
+
+    def __repr__(self):
+        return f"(TOKEN with token type {self.type.__repr__()} and value {self.value})"
+
+def define_keywords(extension):
+    KEYWORDS = {
+        "variable": TokenType("Variable"),
+        "let": TokenType("Let"),
+        "constant": TokenType("Constant"),
+        "is": TokenType("Is"),
+        "be": TokenType("Be"),
+        "now": TokenType("Now"),
+        "true": TokenType("True"),
+        "false": TokenType("False"),
+        "null": TokenType("Null"),
+        "get": TokenType("Get"),
+        "module": TokenType("Module")
+    }
+
+    if extension == "fl":
+        KEYWORDS.update({"create": TokenType("Create"), "changeable": TokenType("Changeable"), "unchangeable": TokenType("Unchangeable")})
     
-    def __repr__(self) -> str:
-        return f"(Token {self.type.type}{f': {self.value}' if self.value else ''})"
+    return KEYWORDS
 
-def is_alpha(source: str) -> bool:
-    return source.isalpha() or source == "_"
+DIGITS = digits + "."
+LETTERS = ascii_letters + "_"
+LEGALS = DIGITS + LETTERS
+QUOTES = "'\""
 
-def is_int(string: str) -> bool:
-    if string == ".":
-        return True
-    
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
-    
-def is_skippable(source: str) -> bool:
-    return source.isspace() and source != "\n"
-
-def create_token(token_type: TokenType, value: str) -> Token:
-    return Token(token_type, value)
-
-def tokenize(source: str) -> list[Token]:
+def tokenize(code, extension):
+    KEYWORDS = define_keywords(extension)
+    src = list(code)
     tokens = []
-    source = list(source)
-    while source:
-        if source[0] == "(":
-            tokens += [create_token(TokenType("OpenParen"), source.pop(0))]
-        elif source[0] == ")":
-            tokens += [create_token(TokenType("CloseParen"), source.pop(0))]
-        elif source[0] in "+-*/":
-            tokens += [create_token(TokenType("BinaryOperator"), source.pop(0))]
-        elif source[0] == ":":
-            tokens += [create_token(TokenType("Colon"), source.pop(0))]
-        elif source[0] == ";":
-            tokens += [create_token(TokenType("Semi"), source.pop(0))]
-        elif source[0] == "[":
-            tokens += [create_token(TokenType("OpenBracket"), source.pop(0))]
-        elif source[0] == "]":
-            tokens += [create_token(TokenType("CloseBracket"), source.pop(0))]
-        elif source[0] == "\n":
-            tokens += [create_token(TokenType("Newline"), source.pop(0))]
-        elif source[0] == ".":
-            tokens += [create_token(TokenType("Dot"), source.pop(0))]
-        else:
-            # Handle multi-character tokens
-            if source[0:INDENTATION] == [" "] * INDENTATION:
-                tokens += [create_token(TokenType("Tab"), "\t")]
-                for i in range(4):
-                    source.pop(0)
-            elif source[0] == "=":
-                tokens += [create_token(TokenType("BinaryOperator"), source.pop(0))]
-                if source:
-                    if source[0] == "=":
-                        source.pop(0)
-            elif source[0] == "!":
-                source.pop(0)
-                if not source:
-                    print("SyntaxError: Expected '='")
-                    sys.exit(1)
+    while src:
+        match src[0]:
+            case "\t":
+                tokens += [Token(TokenType("Tab"), src.pop(0))]
+            case "\n":
+                tokens += [Token(TokenType("Newline"), src.pop(0))]
+            case "+":
+                tokens += [Token(TokenType("Plus"), src.pop(0))]
+            case "-":
+                tokens += [Token(TokenType("Minus"), src.pop(0))]
+            case "*":
+                tokens += [Token(TokenType("Multiply"), src.pop(0))]
+            case "/":
+                tokens += [Token(TokenType("Divide"), src.pop(0))]
+            case "^":
+                tokens += [Token(TokenType("Power"), src.pop(0))]
+            case "(":
+                tokens += [Token(TokenType("OpenParen"), src.pop(0))]
+            case ")":
+                tokens += [Token(TokenType("CloseParen"), src.pop(0))]
+            case "[":
+                tokens += [Token(TokenType("OpenBracket"), src.pop(0))]
+            case "]":
+                tokens += [Token(TokenType("CloseBracket"), src.pop(0))]
+            case ":":
+                tokens += [Token(TokenType("Colon"), src.pop(0))]
+            case ";":
+                tokens += [Token(TokenType("Semi"), src.pop(0))]
+            case "=":
+                tokens += [Token(TokenType("Equals"), src.pop(0))]
+            case "!":
+                src.pop(0)
+                if not src:
+                    return RuntimeResult(None, SyntaxError("Expected '='", 99)) # not decided
+                
+                if src.pop(0) != "=":
+                    return RuntimeResult(None, SyntaxError("Expected '='", 99)) # not decided
+                
+                tokens += [Token(TokenType("NotEquals"), "!=")]
+            case ">":
+                src.pop(0)
+                if not src:
+                    tokens += [Token(TokenType("GreaterThan"), ">")]
+                    continue
 
-                if source[0] != "=":
-                    print(f"SyntaxError: Expected '=', got {source[0]}")
-                
-                source.pop(0)
-                tokens += [create_token(TokenType("BinaryOperator"), "!=")]
-            elif source[0] == ">":
-                source.pop(0)
-                if not source:
-                    tokens += [create_token(TokenType("BinaryOperator"), ">")]
-                elif source[0] == "=":
-                    source.pop(0)
-                    tokens += [create_token(TokenType("BinaryOperator"), ">=")]
-                else:
-                    tokens += [create_token(TokenType("BinaryOperator"), ">")]
-            elif source[0] == "<":
-                source.pop(0)
-                if not source:
-                    tokens += [create_token(TokenType("BinaryOperator"), "<")]
-                elif source[0] == "=":
-                    source.pop(0)
-                    tokens += [create_token(TokenType("BinaryOperator"), "<=")]
-                else:
-                    tokens += [create_token(TokenType("BinaryOperator"), "<")]
-            elif is_int(source[0]):
-                number = ""
-                while source and is_int(source[0]):
-                    number += source.pop(0)
-                
-                count = number.count(".")
-                if count > 1:
-                    print(f"SyntaxError: Expected 1 '.', got {count}/1")
-                    sys.exit(1)
+                if src[0] != "=":
+                    tokens += [Token(TokenType("GreaterThan"), ">")]
+                    continue
+
+                tokens += [Token(TokenType("GreaterThanOrEquals"), ">=")]
+                src.pop(0)
+            case "<":
+                src.pop(0)
+                if not src:
+                    tokens += [Token(TokenType("SmallerThan"), "<")]
+                    continue
+
+                if src[0] != "=":
+                    tokens += [Token(TokenType("SmallerThan"), "<")]
+                    continue
+
+                tokens += [Token(TokenType("SmallerThanOrEquals"), "<=")]
+                src.pop(0)
+            case _:
+                if src[0:4] == [" "] * 4:
+                    tokens += [Token(TokenType("Tab"), "    ")]
+                    for i in range(4):
+                        src.pop(0)
                     
-                tokens += [create_token(TokenType("Number"), number)]
-            elif is_alpha(source[0]):
-                identifier = ""
-                while source and (is_alpha(source[0]) or is_int(source[0])):
-                    identifier += source.pop(0)
-                
-                tt = KEYWORDS.get(identifier, TokenType("Identifier"))
-                tokens += [create_token(tt, identifier)]
-            elif source[0] in "'\"":
-                string = source.pop(0)
-                quote = string
-                legal = True
-                ran = False
-                while source[0:1] != [quote] and source:
-                    ran = True
-                    char = source[0]
-                    string += source.pop(0)
-                    if not source:
-                        legal = False
-                        break
+                    continue
 
-                    if char == "\\":
-                        string += source.pop(0)
-                
-                if not legal or not ran:
-                    print(f"SyntaxError: Expected '{quote}'")
-                    sys.exit(1)
-                
-                string = ast.literal_eval(string + source.pop(0))
-                tokens += [create_token(TokenType("String"), string)]
-            elif is_skippable(source[0]):
-                source.pop(0) # skip
-            else:
-                print(f"SyntaxError: Unexpected character: '{source[0]}'")
-                sys.exit(1)
-    #print(tokens)
-    return tokens + [create_token(TokenType("EOF"), "EOF")]
+                if src[0] == " ":
+                    src.pop(0)
+                    continue
+
+                if src[0] in DIGITS:
+                    number = ""
+                    dot_count = 0
+                    while src[0] in DIGITS:
+                        if src[0] == ".":
+                            dot_count += 1
+                        
+                        number += src.pop(0)
+                        if not src:
+                            break
+                    
+                    if dot_count > 1:
+                        return RuntimeResult(None, SyntaxError(f"Expected 0 or 1 '.' in a number, got {dot_count}/1", 36))
+                    
+                    tokens += [Token(TokenType("Number"), number)]
+                    continue
+
+                if src[0] in LETTERS:
+                    identifier = ""
+                    while src[0] in LEGALS:
+                        identifier += src.pop(0)
+                        if not src:
+                            break
+
+                    if identifier in KEYWORDS:
+                        tokens += [Token(KEYWORDS[identifier], identifier)]
+                        continue
+
+                    tokens += [Token(TokenType("Identifier"), identifier)]
+                    continue
+
+                if src[0] in QUOTES:
+                    quote = src.pop(0)
+                    string = ""
+                    flag = True
+                    while src:
+                        string += src[0]
+                        if src[0] == "\\":
+                            src.pop(0)
+                            if not src:
+                                break
+
+                            string += src.pop(0)
+                        
+                        src.pop(0)
+                        if src[0] == quote:
+                            flag = False
+                            break
+                    
+                    if flag:
+                        return RuntimeResult(None, SyntaxError(f"Expected '{quote}'", 83))
+                    
+                    tokens += [Token(TokenType("String"), string)]
+                    src.pop(0)
+                    continue
+
+                return RuntimeResult(None, SyntaxError(f"Unexpected character: '{src[0]}'", 47))
+            
+    return RuntimeResult(tokens + [Token(TokenType("EOF"), "EOF")])
+

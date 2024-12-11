@@ -1,2 +1,0 @@
-let name be ask: "What your name? "
-show: name

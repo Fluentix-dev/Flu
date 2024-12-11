@@ -1,2 +1,4 @@
-let name be ask: "What your name? "
-show: name
+get module conversions
+
+let a be conversions: to_number: "5"
+show: a + 5

@@ -2,9 +2,14 @@ import os
 import subprocess
 import sys
 from colorama import Fore, Style, init
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from google.oauth2.service_account import Credentials
+try:
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    from google.oauth2.service_account import Credentials
+except:
+    with open(os.path.dirname(os.path.abspath(__file__)) + '/fluentix.data', 'w') as f:
+        f.write("0")
+
 import re
 from .get import do
 
@@ -21,7 +26,7 @@ def install(package):
 def is_package_installed():
     """Check if a package is already installed."""
     try:
-        with open('fluentix.data', 'r') as f:
+        with open(os.path.dirname(os.path.abspath(__file__)) + '/fluentix.data', 'r') as f:
             return f.read() == "1"
     except FileNotFoundError:
         return False
@@ -97,7 +102,7 @@ def main(path):
     if is_package_installed() and do():
         return upload_file(path)
 
-    print(f"{Fore.WHITE}[INFO] In order to use command 'upload/manage-package', you would have to install an additional of approximately 380 MBs for the 'Upload extension'.")
+    print(f"{Fore.WHITE}[INFO] In order to use command 'upload/manage-package', you would have to install an additional of approximately 19 MBs for the 'Upload extension'.")
 
     user_input = input(f"{Fore.WHITE}Would you like to continue installing the missing packages (y/n)? ").strip().lower()
 
@@ -108,7 +113,7 @@ def main(path):
                 install(package)
                 print(f"{Fore.GREEN}[SUCCESS] Successfully installed {package}")
 
-                with open('fluentix.data', 'w') as f:
+                with open(os.path.dirname(os.path.abspath(__file__)) + '/fluentix.data', 'w') as f:
                     f.write("1")
 
                 return upload_file(path)

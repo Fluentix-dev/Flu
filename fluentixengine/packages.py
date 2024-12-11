@@ -47,7 +47,7 @@ def get_connection():
             port=int(PORT)
         )
     else:
-        exit()
+        sys.exit()
 
 def fetch_data():
     """

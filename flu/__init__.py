@@ -1,24 +1,33 @@
+from .frontend.lexer import tokenize
 from .frontend.parser import Parser
 from .runtime.interpreter import evaluate
-from .runtime.values import *
-from .frontend.lexer import tokenize
-import asyncio
+from .runtime.values import Environment, NativeFunction
+import flu.runtime.builtin_functions
 
-def execute_code(file):
-    with open(file) as file:
-        code = file.read()
+def execute_code(code, extension):
+    global_environment = Environment()
+    global_environment.assign("show", NativeFunction("show", flu.runtime.builtin_functions.show), True)
+    global_environment.assign("ask", NativeFunction("ask", flu.runtime.builtin_functions.ask), True)
+    if extension == "fl":
+        global_environment.assign("input", NativeFunction("input", flu.runtime.builtin_functions.ask), True)
     
-    asyncio.run(fluentix(code))
+    global_environment.assign("stop", NativeFunction("stop", flu.runtime.builtin_functions.stop), True)
 
-async def fluentix(source):
-    tokens = tokenize(source)
-    parser = Parser(tokens)
-    environment = Environment()
+    rt = tokenize(code, extension)
+    if rt.error:
+        rt.error.show_error()
 
-    program = parser.produce_ast()
+    #print(f"Tokens: {rt.result}\n")
+
+    parser = Parser(rt.result, extension)
+    rt = parser.produce_ast()
+    if rt.error:
+        rt.error.show_error()
     
-    evaluate(program, environment)
+    print(f"Tree: {rt.result}\n")
 
-if __name__ == "__main__":
-    file = input("Which file do you want to run? ")
-    execute_code(f"{file}.fluentix")
+    rt = evaluate(rt.result, global_environment)
+    if rt.error:
+        rt.error.show_error()
+    
+    #print(f"Result: {rt.result}")

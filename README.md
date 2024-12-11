@@ -1,6 +1,6 @@
-# Fluentix: v0.0.1 pre-alpha
+# fluentix: v0.0.1 pre-alpha
 
-Official Fluentix's repo.
+Official fluentix's repo.
 
 [![N|Solid](https://cdn.prod.website-files.com/674856bff10105193a1e4dd4/6748583d409715928ff42120_fluentix-white.png)](https://fluentix.dev)
 
@@ -16,8 +16,8 @@ Features that Fluentix has.
 
 - Variables declarations
 - Equations solved
-- `Show` (print) function (shows output)
-- `Input` / `ask` functions (get user input)
+- `Show` (print) function
+- `Input` / `ask` functiom
 
 ### Fluentix Syntax
 
@@ -71,7 +71,7 @@ Get Fluentix via those ways:
 
 ### 1. All-in-one installer (coming soon)
 
-It will be available in the future. http://fluentix.dev/get
+It will be available in the future. http://fluentix.dev/downloads
 
 ### 2. Python
 
@@ -83,7 +83,7 @@ Start using it by typing `fluentix` (`flu` or `fl` for short)
 
 ## VS-Code:
 
-Official syntax for Fluentix is at https://marketplace.visualstudio.com/items?itemName=Fluentix.fluentix
+Official syntax for Fluentix is at https://marketplace.visualstudio.com/manage/publishers/fluentix/extensions/fluentix/hub?_a=acquisition
 
 ---
 

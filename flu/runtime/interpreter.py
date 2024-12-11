@@ -1,321 +1,366 @@
+from ..errors import RuntimeResult, MathError, InterpreterError, DataTypeError, ModuleError
 from .values import *
-from ..frontend.abstract_syntax_tree import *
-import sys
 
-# STATEMENTS
-def evaluate_program(program: Program, environment: Environment) -> RuntimeValue:
-    last_evaluated = NullValue()
-
-    for statement in program.body:
-        last_evaluated = evaluate(statement, environment)
-    
-    return last_evaluated
-
-def evaluate_variable_declaration(node: VariableDeclaration, environment: Environment):
-    value = evaluate(node.value, environment)
-    environment.declare_variable(node.identifier, value, node.constant)
-    return value
-
-def evaluate_assignment_statement(node: AssignmentStatement, environment: Environment):
-    value = evaluate(node.value, environment)
-    environment.assign_variable(node.identifier, value)
-    return value
-
-# EXPRESSIONS (FUCK YOU CIRCULAR IMPORTS)
-def evaluate_binary_expression(binary_operation: BinaryExpression, environment: Environment) -> RuntimeValue:
-    left = evaluate(binary_operation.left, environment)
-    right = evaluate(binary_operation.right, environment)
-    operator = binary_operation.operator
-
-    if operator == "+":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
-
-            return evaluate_numeric_binary_expression(left, right, "+")
+def evaluate_program(ast_node, environment):
+    last_evaluated = None
+    for statement in ast_node.body:
+        rt = evaluate(statement, environment)
+        if rt.error:
+            return RuntimeResult(None, rt.error)
         
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
+        last_evaluated = rt.result
     
-    if operator == "-":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+    return RuntimeResult(last_evaluated)
 
-            return evaluate_numeric_binary_expression(left, right, "-")
+def evaluate(ast_node, environment):
+    match ast_node.kind.type:
+        case "Program":
+            rt = evaluate_program(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "Identifier":
+            rt = evaluate_identifier(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "NumberLiteral":
+            rt = evaluate_number_literal(ast_node)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "BooleanLiteral":
+            rt = evaluate_boolean_literal(ast_node)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "NullLiteral":
+            rt = evaluate_null_literal()
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "StringLiteral":
+            rt = evaluate_string_literal(ast_node)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "ArrayLiteral":
+            rt = evaluate_array_literal(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "CallExpression":
+            rt = evaluate_call_expression(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "UnaryExpression":
+            rt = evaluate_unary_expression(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "BinaryExpression":
+            rt = evaluate_binary_expression(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "ComparisonExpression":
+            rt = evaluate_comparison_expression(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "AssignmentStatement":
+            rt = evaluate_assignment_statement(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "UpdateStatement":
+            rt = evaluate_update_statement(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case "GetStatement":
+            rt = evaluate_get_statement(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        case _:
+            return RuntimeResult(None, InterpreterError(f"This AST node has not been setup for interpretion yet: {ast_node}", 35))
+
+def evaluate_assignment_statement(ast_node, environment):
+    rt = evaluate(ast_node.value, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    rt = environment.assign(ast_node.identifier, rt.result, ast_node.constant)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    return RuntimeResult(None)
+
+def evaluate_update_statement(ast_node, environment):
+    rt = evaluate(ast_node.value, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    rt = environment.update(ast_node.identifier, rt.result)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    return RuntimeResult(None)
+
+def evaluate_get_statement(ast_node, environment):
+    module = ast_node.module
+    match module:
+        case "conversions":
+            import flu.runtime.conversions
+            environment.assign("conversions", Module("conversions"), True)
+            rt = environment.lookup("conversions")
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            module = rt.result
+            module.assign("to_number", NativeFunction("to_number", flu.runtime.conversions.to_number, 1))
+            return RuntimeResult(None)
+        case _:
+            return RuntimeResult(None, ModuleError(f"No module named {module}", 99)) # unexpected
+
+def evaluate_identifier(ast_node, environment):
+    rt = environment.lookup(ast_node.symbol)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    return RuntimeResult(rt.result)
+
+def evaluate_number_literal(ast_node):
+    return RuntimeResult(create_number(ast_node.value))
+
+def evaluate_boolean_literal(ast_node):
+    return RuntimeResult(Boolean(ast_node.value))
+
+def evaluate_null_literal():
+    return RuntimeResult(Null())
+
+def evaluate_string_literal(ast_node):
+    return RuntimeResult(String(ast_node.value))
+
+def evaluate_array_literal(ast_node, environment):
+    array = []
+    for element in ast_node.value:
+        rt = evaluate(element, environment)
+        if rt.error:
+            return RuntimeResult(None, rt.error)
         
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
+        array += [rt.result]
     
-    if operator == "*":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+    return RuntimeResult(Array(array))
 
-            return evaluate_numeric_binary_expression(left, right, "*")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
+def evaluate_call_expression(ast_node, environment):
+    rt = evaluate(ast_node.callee, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
     
-    if operator == "/":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+    if rt.result.type.type not in ("native function", "module"):
+        return RuntimeResult(None, DataTypeError(f"Expected native function or module, got {rt.result.type.type}", 5))
+    
+    match rt.result.type.type:
+        case "native function":
+            callee = rt.result
+            arguments = []
+            for argument in ast_node.arguments:
+                rt = evaluate(argument, environment)
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                arguments += [translate_fluentix_to_python(rt.result)]
+            
+            rt = callee.call(arguments)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(translate_python_to_fluentix(rt.result))
+        case "module":
+            if len(ast_node.arguments) != 1:
+                return RuntimeResult(None, ArgumentError(f"Expected 1 function in '{rt.result.callee.symbol}', got {len(ast_node.arguments)}/1"))
+            
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            func = ast_node.arguments[0]
+            
+            rt = environment.lookup(ast_node.callee.symbol)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            rt = rt.result.lookup(func.callee.symbol)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
 
-            return evaluate_numeric_binary_expression(left, right, "/")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
-    
-    if operator == ">":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+            func = rt.result
+            arguments = []
+            for argument in ast_node.arguments[0].arguments:
+                rt = evaluate(argument, environment)
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                arguments += [translate_fluentix_to_python(rt.result)]
+            
+            rt = func.call(arguments)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(translate_python_to_fluentix(rt.result))
 
-            return evaluate_comparison_binary_expression(left, right, ">")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
-        
-    if operator == "<":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+def evaluate_unary_expression(ast_node, environment):
+    rt = evaluate(ast_node.value, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    match rt.result.type.type:
+        case "number":
+            if ast_node.sign == "-":
+                return RuntimeResult(create_number(-rt.result.value))
+            
+            return RuntimeResult(rt.result)
+        case _:
+            return RuntimeResult(None, DataTypeError(f"Unexpected unary operation for '{rt.result.type.type}'", 2))
 
-            return evaluate_comparison_binary_expression(left, right, "<")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
+def evaluate_binary_expression(ast_node, environment):
+    rt = evaluate(ast_node.left, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
     
-    if operator == ">=":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+    left = rt.result
+    
+    rt = evaluate(ast_node.right, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    right = rt.result
 
-            return evaluate_comparison_binary_expression(left, right, ">=")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
-    
-    if operator == "<=":
-        if left.type.type in ("number", "boolean"):
-            if right.type.type not in ("number", "boolean"):
-                print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-                sys.exit(1)
+    match ast_node.operator:
+        case "Plus":
+            match left.type.type:
+                case "number":
+                    if right.type.type != "number":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 42))
+                    
+                    return RuntimeResult(create_number(left.value + right.value))
+                case _:
+                    return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 7))
+        case "Minus":
+            if left.type.type != "number" or right.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 100))
+            
+            return RuntimeResult(create_number(left.value - right.value))
+        case "Multiply":
+            if left.type.type != "number" or right.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 69))
+            
+            return RuntimeResult(create_number(left.value * right.value))
+        case "Divide":
+            if left.type.type != "number" or right.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 21))
+            
+            if right.value == 0:
+                return RuntimeResult(None, MathError(f"Cannot divide {left.value} by 0", 1))
+            
+            return RuntimeResult(create_number(left.value / right.value))
+        case "Power":
+            if left.type.type != "number" or right.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 16))
+            
+            return RuntimeResult(create_number(left.value ** right.value))
 
-            return evaluate_comparison_binary_expression(left, right, "<=")
-        
-        print(f"BinaryExpressionError: Unexpected binary operation between '{left.type.type}' and '{right.type.type}'")
-        sys.exit(1)
+def evaluate_comparison_expression(ast_node, environment):
+    rt = evaluate(ast_node.left, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    left = rt.result
 
-    if operator == "=":
-        return evaluate_equality_binary_expression(left, right, "=")
+    rt = evaluate(ast_node.right, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
     
-    if operator == "!=":
-        return evaluate_equality_binary_expression(left, right, "!=")
+    right = rt.result
 
-def evaluate_equality_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: str) -> RuntimeValue:
-    if operator == "=":
-        if left.type.type != right.type.type:
-            return BooleanValue("false")
-        
-        return BooleanValue("true" if left.value == right.value else "false")
-    
-    if operator == "!=":
-        if left.type.type != right.type.type:
-            return BooleanValue("true")
-        
-        return BooleanValue("true" if left.value != right.value else "false")
+    match ast_node.operator:
+        case "Equals":
+            if left.type.type != right.type.type:
+                return RuntimeResult(Boolean("false"))
+            
+            if left.value == right.value:
+                return RuntimeResult(Boolean("true"))
+            
+            return RuntimeResult(Boolean("false"))
+        case "NotEquals":
+            if left.type.type != right.type.type:
+                return RuntimeResult(Boolean("true"))
+            
+            if left.value != right.value:
+                return RuntimeResult(Boolean("true"))
+            
+            return RuntimeResult(Boolean("false"))
+        case "GreaterThan":
+            match left.type.type:
+                case "number":
+                    if right.type.type != "number":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 99)) # unexpected
+                    
+                    if left.value > right.value:
+                        return RuntimeResult(Boolean("true"))
 
-def evaluate_comparison_binary_expression(left: NumberValue | BooleanValue, right: NumberValue | BooleanValue, operator: str) -> RuntimeValue:
-    if left.type.type == "boolean":
-        left.value = translate_boolean(left)
-    
-    if right.type.type == "boolean":
-        right.value = translate_boolean(right)
-    
-    if operator == ">":
-        return BooleanValue("true" if float(left.value) > float(right.value) else "false")
-    
-    if operator == "<":
-        return BooleanValue("true" if float(left.value) < float(right.value) else "false")
-    
-    if operator == ">=":
-        return BooleanValue("true" if float(left.value) >= float(right.value) else "false")
-    
-    if operator == "<=":
-        return BooleanValue("true" if float(left.value) <= float(right.value) else "false")
+                    return RuntimeResult(Boolean("false"))
+                case _:
+                    return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 99)) # unexpected
+        case "GreaterThanOrEquals":
+            match left.type.type:
+                case "number":
+                    if right.type.type != "number":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 99)) # unexpected
+                    
+                    if left.value >= right.value:
+                        return RuntimeResult(Boolean("true"))
 
-def evaluate_numeric_binary_expression(left: NumberValue | BooleanValue, right: NumberValue | BooleanValue, operator: str) -> RuntimeValue:
-    if left.type.type == "boolean":
-        left.value = translate_boolean(left)
-        
-    if right.type.type == "boolean":
-        right.value = translate_boolean(right)
+                    return RuntimeResult(Boolean("false"))
+                case _:
+                    return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 99)) # unexpected
+        case "SmallerThan":
+            match left.type.type:
+                case "number":
+                    if right.type.type != "number":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 99)) # unexpected
+                    
+                    if left.value < right.value:
+                        return RuntimeResult(Boolean("true"))
 
-    if operator == "+":
-        return create_number(float(left.value) + float(right.value))
-    
-    if operator == "-":
-        return create_number(float(left.value) - float(right.value))
-    
-    if operator == "*":
-        return create_number(float(left.value) * float(right.value))
-    
-    if operator == "/":
-        if float(right.value) == 0:
-            print(f"MathError: Division by 0")
-            sys.exit(1)
+                    return RuntimeResult(Boolean("false"))
+                case _:
+                    return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 99)) # unexpected
+        case "SmallerThanOrEquals":
+            match left.type.type:
+                case "number":
+                    if right.type.type != "number":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 99)) # unexpected
+                    
+                    if left.value <= right.value:
+                        return RuntimeResult(Boolean("true"))
 
-        return create_number(float(left.value) / float(right.value))
-    
-    print(f"SyntaxError: Operator '{operator}' was not implemented")
-    sys.exit(1)
-
-def evaluate_unary_expression(ast_node: UnaryExpression, environment: Environment):
-    sign = ast_node.sign
-    expression = evaluate(ast_node.expression, environment)
-    if expression.type.type == "number":
-        return expression if sign == "+" else create_number(-expression.value)
-    
-    if expression.type.type == "boolean":
-        if sign == "+":
-            return expression
-        
-        if expression.value == "true":
-            return BooleanValue("false")
-        
-        return BooleanValue("true")
-    
-    if expression.type.type == "string":
-        if sign == "-":
-            return expression
-        
-        return StringValue(expression.value[::-1])
-
-def evaluate_call_expression(call: CallExpression, environment: Environment) -> RuntimeValue:
-    arguments = [evaluate(argument, environment) for argument in call.arguments]
-    function = evaluate(call.callee, environment)
-    if function.type.type != "native_function":
-        print("SyntaxError: Expected function, got variable")
-        sys.exit(1)
-    
-    # somehow, we need to translate from flu values to python values
-    result = function.call(arguments)
-
-    return result
-
-def translate_flu_value(value: Expression):
-    if value.type.type == "boolean":
-        return translate_boolean(value.value)
-    
-    if value.type.type == "array":
-        values = []
-        for element in value.value:
-            values += [translate_flu_value(element)]
-        
-        return values
-    
-    if value.type.type == "null":
-        return None
-    
-    return value.value
-
-def translate_python_value(value):
-    if isinstance(value, (int, float)):
-        return create_number(float(value))
-    
-    if isinstance(value, str):
-        return StringValue(value)
-    
-    if isinstance(value, bool):
-        return BooleanValue("true" if value else "false")
-    
-    if isinstance(value, (list, tuple, set)):
-        array = []
-        for element in value:
-            array += [translate_python_value(element)]
-        
-        return ArrayValue(array)
-    
-    if value is None:
-        return NullValue()
-
-def evaluate_array(ast_node: ArrayLiteral, environment: Environment):
-    return ArrayValue([evaluate(i, environment) for i in ast_node.value])
-
-def evaluate_identifier(identifier: Identifier, environment: Environment) -> RuntimeValue:
-    return environment.lookup_variable(identifier.symbol)
-
-def evaluate_fetch_expression(ast_node: FetchExpression, environment: Environment):
-    fetched = evaluate(ast_node.fetched, environment)
-    index = evaluate(ast_node.index, environment)
-    if fetched.type.type in ("number", "null", "boolean"):
-        print(f"TypeError: Unexpected fetch operation between '{fetched.type.type}' and '{index.type.type}'")
-        sys.exit(1)
-
-    if index.type.type != "number":
-        print(f"TypeError: Unexpected fetch operation between '{fetched.type.type}' and '{index.type.type}'")
-        sys.exit(1)
-
-    if index.value % 1 > 0:
-        print(f"MathError: Invalid index value, got remainder of {index.value % 1}/1.")
-        sys.exit(1)
-    
-    if fetched.type.type == "string":
-        modulo = int(index.value % len(fetched.value))
-        return StringValue(fetched.value[modulo])
-
-    if fetched.type.type == "array":
-        modulo = int(index.value % len(fetched.value))
-        return fetched.value[modulo]
-    
-def evaluate(ast_node: Statement, environment: Environment) -> RuntimeValue:   
-    if ast_node.kind.type == "NumericLiteral":
-        return create_number(ast_node.value)
-    
-    if ast_node.kind.type == "NullLiteral":
-        return NullValue()
-    
-    if ast_node.kind.type == "StringLiteral":
-        return StringValue(ast_node.value)
-    
-    if ast_node.kind.type == "BooleanLiteral":
-        return BooleanValue(ast_node.value)
-    
-    if ast_node.kind.type == "ArrayLiteral":
-        return evaluate_array(ast_node, environment)
-
-    if ast_node.kind.type == "Identifier":
-        return evaluate_identifier(ast_node, environment)
-
-    if ast_node.kind.type == "BinaryExpr":
-        return evaluate_binary_expression(ast_node, environment)
-    
-    if ast_node.kind.type == "UnaryExpr":
-        return evaluate_unary_expression(ast_node, environment)
-
-    if ast_node.kind.type == "FetchExpr":
-        return evaluate_fetch_expression(ast_node, environment)
-
-    if ast_node.kind.type == "CallExpr":
-        return evaluate_call_expression(ast_node, environment)
-
-    if ast_node.kind.type == "Program":
-        return evaluate_program(ast_node, environment)
-
-    if ast_node.kind.type == "VariableDeclaration":
-        return evaluate_variable_declaration(ast_node, environment)
-    
-    if ast_node.kind.type == "AssignmentStatement":
-        return evaluate_assignment_statement(ast_node, environment)
-    
-    print(f"InterpreterError: This AST node has not been setup for interpretation node: '{ast_node}'")
-    sys.exit(1)
+                    return RuntimeResult(Boolean("false"))
+                case _:
+                    return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 99)) # unexpected

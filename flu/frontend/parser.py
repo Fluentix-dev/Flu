@@ -1,218 +1,379 @@
 from .abstract_syntax_tree import *
-from .lexer import *
-
-import sys
+from ..errors import RuntimeResult, SyntaxError
+from .lexer import Token, TokenType
 
 class Parser:
-    def __init__(self, tokens: list[Token]) -> None:
+    def __init__(self, tokens, extension):
         self.tokens = tokens
+        self.extension = extension
     
-    def not_end(self) -> bool:
-        if not self.tokens:
-            return False
-        
-        return self.tokens[0].type.type not in END_TOKENS
-
-    def at(self) -> Token:
+    def at(self):
         return self.tokens[0]
-    
-    def eat(self) -> Token:
-        self.skip_tabs()
-        if not self.tokens:
-            return None
 
-        return self.tokens.pop(0)
-    
-    def expect(self, *types: TokenType, error) -> Token:
-        prev = self.eat()
-        if not prev:
-            print(f"SyntaxError: {error}")
-            sys.exit(1)
-
-        if prev.type.type not in [type.type for type in types]:
-            print(f"SyntaxError: {error}, got '{prev.type.type}'")
-            sys.exit(1)
-        
-        return prev
-
-    def skip_tabs(self):
+    def skip_tab(self):
         while self.at().type.type == "Tab":
             self.tokens.pop(0)
-        
-    def produce_ast(self) -> Program:
-        program = Program([])
 
-        # Parse until EOF
-        while True:
-            if not self.tokens:
-                break
+    def eat(self):
+        self.skip_tab()
+        return self.tokens.pop(0)
 
-            self.skip_tabs()
-            if self.at().type.type == "EOF":
-                break
-
-            if self.at().type.type == "Newline":
-                self.eat()
-                continue
-
-            while self.not_end():
-                program.body += [self.parse_statement()]
-        #print(program)
-        return program
-
-    def parse_statement(self) -> Statement:      
-        self.skip_tabs()  
-        if self.at().type.type in ("Let", "Variable"):
-            return self.parse_variable_declaration()
-
-        if self.at().type.type == "Constant":
-            return self.parse_const_variable_declaration()
-        
-        if self.at().type.type == "Identifier":
-            saved = self.eat()
-            if self.at().type.type.lower() in KEYWORDS:
-                return self.parse_assignment_statement(saved)
+    def expect(self, *expected, error):
+        token = self.eat()
+        if token.type.type not in expected:
+            if self.in_end(token):
+                return RuntimeResult(None, error)
             
-            self.tokens = [saved] + self.tokens
-
-        return self.parse_expression()
-
-    def parse_variable_declaration(self) -> VariableDeclaration:
-        keyword = self.eat()
-        identifier = self.expect(TokenType("Identifier"), error="Expected identifier").value
-
-        if keyword.type.type == "Let":
-            self.expect(TokenType("Be"), error="Expected 'be'")
-        else:
-            self.expect(TokenType("Is"), error="Expected 'is'")
+            return RuntimeResult(None, SyntaxError(f"{error.reason}, got '{token.value}'", error.error_code))
         
-        self.skip_tabs()
-        if self.at().type.type in END_TOKENS:
-            print("SyntaxError: Expected expression")
-            sys.exit(1)
+        return RuntimeResult(token)
 
-        expression = self.parse_expression()
-        if self.at().type.type not in END_TOKENS:
-            print(f"SyntaxError: Expected nothing after the expression, got {self.at()}")
-            sys.exit(1)
+    def in_end(self, token):
+        return token.type.type in ("EOF", "Newline")
 
-        self.eat()
-        return VariableDeclaration(False, identifier, expression)
+    def in_whitespace(self, token):
+        return token.type.type in ("Newline", "Tab")
 
-    def parse_assignment_statement(self, identifier: str) -> AssignmentStatement:
-        if self.at().type.type != "Is":
-            print(f"SyntaxError: Expected 'is', got {self.at()}")
-            sys.exit(1)
+    def not_eof(self):
+        return self.at().type.type != "EOF"
 
-        self.eat()
-        self.expect(TokenType("Now"), error="SyntaxError: Expected 'now'")
+    def produce_ast(self):
+        program = Program([])
+        while self.not_eof():
+            self.skip_tab()
+            if self.at().type.type == "EOF":
+                return RuntimeResult(program)
+            
+            rt = self.parse_statement()
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            program.body += [rt.result]
+            while self.at().type.type == "Newline":
+                self.eat()
 
-        self.skip_tabs()
-        if self.at().type.type in END_TOKENS:
-            print("SyntaxError: Expected expression")
-            sys.exit(1)
+        return RuntimeResult(program)
 
-        expression = self.parse_expression()
-
-        if self.at().type.type not in END_TOKENS:
-            print(f"SyntaxError: Expected nothing after the expression, got {self.at()}")
-            sys.exit(1)
-
-        self.eat()
-        return AssignmentStatement(identifier, expression)
-
-    def parse_const_variable_declaration(self) -> VariableDeclaration:
-        self.eat()
-        identifier = self.expect(TokenType("Identifier"), error="Expected identifier").value
-
-        self.expect(TokenType("Is"), error="Expected 'is'")
-
-        self.skip_tabs()
-        if self.at().type.type in END_TOKENS:
-            print("SyntaxError: Expected expression")
-            sys.exit(1)
-
-        expression = self.parse_expression()
-
-        if self.at().type.type not in END_TOKENS:
-            print(f"SyntaxError: Expected nothing after the expression, got {self.at()}")
-            sys.exit(1)
-
-        self.eat()
-        return VariableDeclaration(True, identifier, expression)
-
-    def parse_expression(self) -> Expression:
-        self.skip_tabs()
-        return self.parse_comparison_expression()
-
-    def parse_comparison_expression(self) -> Expression:
-        left = self.parse_additive_expression()
-        self.skip_tabs()
-        while self.at().value in ("=", "!=", ">", "<", ">=", "<=") and self.at().type.type == "BinaryOperator":
-            operator = self.eat().value
-
-            right = self.parse_additive_expression()
-            left = BinaryExpression(left, right, operator)
+    def parse_statement(self):
+        match self.at().type.type:
+            case "Variable":
+                rt = self.parse_variable_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Let":
+                rt = self.parse_let_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Constant":
+                rt = self.parse_constant_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Create":
+                if self.extension == "fl":
+                    rt = self.parse_create_statement()
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    return RuntimeResult(rt.result)
+            case "Identifier":
+                saved = self.eat()
+                if self.at().type.type == "Is":
+                    self.tokens = [saved] + self.tokens
+                    rt = self.parse_update_statement()
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    return RuntimeResult(rt.result)
         
-        return left
+                self.tokens = [saved] + self.tokens
+            case "Get":
+                rt = self.parse_get_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
 
-    def parse_additive_expression(self) -> Expression:
-        left = self.parse_multiplicative_expression()
-        self.skip_tabs()
-        while self.at().value in ("+", "-") and self.at().type.type == "BinaryOperator":
-            operator = self.eat().value
-
-            right = self.parse_multiplicative_expression()
-            left = BinaryExpression(left, right, operator)
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
         
-        return left
+        return RuntimeResult(rt.result)
+
+    def parse_variable_keyword_assignment(self):
+        self.eat()
+        rt = self.expect("Identifier", error=SyntaxError("Expected identifier", 65))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+
+        identifier = rt.result.value
+        
+        rt = self.expect("Is", error=SyntaxError("Expected 'is'", 15))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 61))
+        
+        return RuntimeResult(AssignmentStatement(identifier, rt.result))
     
-    def parse_multiplicative_expression(self) -> Expression:
-        left = self.parse_call_expression()
-        self.skip_tabs()
-        while self.at().value in ("*", "/") and self.at().type.type == "BinaryOperator":
-            operator = self.eat().value
+    def parse_let_keyword_assignment(self):
+        self.eat()
+        rt = self.expect("Identifier", error=SyntaxError("Expected identifier", 57))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
 
-            right = self.parse_call_expression()
-            left = BinaryExpression(left, right, operator)
+        identifier = rt.result.value
         
-        return left
+        rt = self.expect("Be", error=SyntaxError("Expected 'be'", 34))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 98))
+        
+        return RuntimeResult(AssignmentStatement(identifier, rt.result))
 
-    def parse_elements_in_array(self, inside) -> list[Expression]:
-        # seperate elements using ;
+    def parse_constant_keyword_assignment(self):
+        self.eat()
+        rt = self.expect("Identifier", error=SyntaxError("Expected identifier", 19))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+
+        identifier = rt.result.value
+        
+        rt = self.expect("Is", error=SyntaxError("Expected 'is'", 68))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 37))
+        
+        return RuntimeResult(AssignmentStatement(identifier, rt.result, True))
+
+    def parse_create_statement(self):
+        self.eat()
+        rt = self.expect("Colon", error=SyntaxError("Expected ':'", 80))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.expect("Variable", "Constant", "Changeable", "Unchangeable", error=SyntaxError("Expected 'variable', 'constant', 'changeable' or 'unchangeable'", 97))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        self.tokens = [rt.result] + self.tokens
+        match rt.result.type.type:
+            case "Variable":
+                rt = self.parse_variable_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Constant":
+                rt = self.parse_constant_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Changeable":
+                rt = self.parse_variable_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Unchangeable":
+                rt = self.parse_constant_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+
+    def parse_update_statement(self):
+        identifier = self.eat().value
+        self.eat()
+        rt = self.expect("Now", error=SyntaxError(f"Expected 'now', got '{self.at().value}'", 92))
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 67))
+        
+        return RuntimeResult(UpdateStatement(identifier, rt.result))
+
+    def parse_get_statement(self):
+        self.eat()
+        rt = self.expect("Module", error=SyntaxError("Expected 'module'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.expect("Identifier", error=SyntaxError("Expected module name", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 99)) # unexpected
+
+        return RuntimeResult(GetStatement(rt.result.value))
+
+    def parse_expression(self):
+        rt = self.parse_comparison_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        return RuntimeResult(rt.result)
+    
+    def parse_comparison_expression(self):
+        left = self.parse_additive_expression()
+        if left.error:
+            return RuntimeResult(None, left.error)
+        
+        left = left.result
+        while self.at().type.type in ("Equals", "NotEquals", "GreaterThan", "GreaterThanOrEquals", "SmallerThan", "SmallerThanOrEquals"):
+            operator = self.eat()
+            right = self.parse_additive_expression()
+            if right.error:
+                return RuntimeResult(None, right.error)
+            
+            left = ComparisonExpression(left, right.result, operator.type.type)
+        
+        return RuntimeResult(left)
+
+    def parse_additive_expression(self):
+        left = self.parse_multiplicative_expression()
+        if left.error:
+            return RuntimeResult(None, left.error)
+        
+        left = left.result
+        while self.at().type.type in ("Plus", "Minus"):
+            operator = self.eat()
+            right = self.parse_multiplicative_expression()
+            if right.error:
+                return RuntimeResult(None, right.error)
+            
+            left = BinaryExpression(left, operator.type.type, right.result)
+        
+        return RuntimeResult(left)
+    
+    def parse_multiplicative_expression(self):
+        left = self.parse_exponentation_expression()
+        if left.error:
+            return RuntimeResult(None, left.error)
+        
+        left = left.result
+        while self.at().type.type in ("Multiply", "Divide"):
+            operator = self.eat()
+            right = self.parse_exponentation_expression()
+            if right.error:
+                return RuntimeResult(None, right.error)
+            
+            left = BinaryExpression(left, operator.type.type, right.result)
+        
+        return RuntimeResult(left)
+    
+    def parse_exponentation_expression(self):
+        rt = self.parse_unary_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        elements = [rt.result]
+        while self.at().type.type == "Power":
+            self.eat()
+            rt = self.parse_unary_expression()
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            elements += [rt.result]
+        
+        elements = elements[::-1]
+        left = None
+        for element in elements:
+            if left:
+                left = BinaryExpression(element, "Power", left)
+            else:
+                left = element
+        
+        return RuntimeResult(left)
+
+    def parse_unary_expression(self):
+        if self.at().type.type not in ("Plus", "Minus"):
+            rt = self.parse_call_expression()
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
+        
+        sign = "+"
+        while self.at().type.type in ("Plus", "Minus"):
+            operator = self.eat()
+            if operator.type.type == "Minus":
+                sign = "-" if sign == "+" else "-"
+        
+        rt = self.parse_call_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        return RuntimeResult(UnaryExpression(sign, rt.result))
+    
+    def parse_call_expression(self):
+        rt = self.parse_primary_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if self.at().type.type != "Colon":
+            return RuntimeResult(rt.result)
+        
+        callee = rt.result
+
+        inside = []
+        stack = []
+        self.eat()
+        while not self.in_end(self.at()):
+            if self.at().type.type in ("OpenBracket", "OpenParen"):
+                stack += [self.at().type.type]
+            elif self.at().type.type == "CloseParen":
+                if not stack:
+                    break
+                
+                if stack[0] != "OpenParen":
+                    return RuntimeResult(None, SyntaxError("Unexpected ')'", 42))
+
+                stack.pop(0)
+            elif self.at().type.type == "CloseBracket":
+                if not stack:
+                    break
+                
+                if stack[0] != "OpenBracket":
+                    return RuntimeResult(None, SyntaxError("Unexpected ']'", 69))
+
+                stack.pop(0)
+            
+            inside += [self.eat()]
+        
         elements = []
         element = []
         stack = []
         for token in inside:
-            # newline
-            if token.type.type == "Newline":
-                continue
-
-            # check for brackets
-            if token.type.type in ("OpenBracket", "OpenParen"):
-                stack += [token.type.type]
-            elif token.type.type == "CloseParen":
-                if "OpenParen" not in stack:
-                    print("SyntaxError: Unexpected ')'")
-                    sys.exit(1)
-                
-                if stack[0] != "OpenParen":
-                    print("SyntaxError: Unexpected ')'")
-                    sys.exit(1)
-
-                stack.pop(0)
-            elif token.type.type == "CloseBracket":
-                if "OpenBracket" not in stack:
-                    print("SyntaxError: Unexpected ']'")
-                    sys.exit(1)
-                
-                if stack[0] != "OpenBracket":
-                    print("SyntaxError: Unexpected ']'")
-                    sys.exit(1)
-
-                stack.pop(0)
-            
-            # check for semicolon
             if token.type.type == "Semi" and not stack:
                 if element:
                     elements += [element]
@@ -220,190 +381,141 @@ class Parser:
             else:
                 element += [token]
             
+            if token.type.type in ("OpenBracket", "OpenParen"):
+                stack += [token.type.type]
+            elif token.type.type == "CloseParen":
+                if "OpenParen" not in stack:
+                    return RuntimeResult(None, SyntaxError("Unexpected ')'", 63))
+                
+                if stack[0] != "OpenParen":
+                    return RuntimeResult(None, SyntaxError("Unexpected ')'", 84))
+
+                stack.pop(0)
+            elif token.type.type == "CloseBracket":
+                if "OpenBracket" not in stack:
+                    return RuntimeResult(None, SyntaxError("Unexpected ']'", 17))
+                
+                if stack[0] != "OpenBracket":
+                    return RuntimeResult(None, SyntaxError("Unexpected ']'", 27))
+
+                stack.pop(0)
+        
         if element:
             elements += [element]
-
+        
         new = []
         for element in elements:
-            parser = Parser(element + [create_token(TokenType("EOF"), "EOF")])
-            new += [parser.parse_expression()]
+            parser = Parser(element + [Token(TokenType("EOF"), "EOF")], self.extension)
+            rt = parser.parse_expression()
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+
+            new += [rt.result]
         
-        return ArrayLiteral(new)
+        return RuntimeResult(CallExpression(callee, new))
 
-    def parse_call_expression(self) -> Expression:
-        left = self.parse_fetch_expression()
-        if self.at().type.type == "Colon":
-            self.eat()
-            # PARSE ALL SHIT ARGUMENTS YEAH GUYS
-            inside = []
-            stack = []
-            while self.not_end():
-                if self.at().type.type in ("OpenBracket", "OpenParen"):
-                    stack += [self.at().type.type]
-                elif self.at().type.type == "CloseParen":
-                    if not stack:
-                        break
-                    
-                    if stack[0] != "OpenParen":
-                        print("SyntaxError: Unexpected ')'")
-                        sys.exit(1)
-
-                    stack.pop(0)
-                elif self.at().type.type == "CloseBracket":
-                    if not stack:
-                        break
-                    
-                    if stack[0] != "OpenBracket":
-                        print("SyntaxError: Unexpected ']'")
-                        sys.exit(1)
-
-                    stack.pop(0)
+    def parse_primary_expression(self):
+        match self.at().type.type:
+            case "Identifier":
+                return RuntimeResult(Identifier(self.eat().value))
+            case "Number":
+                return RuntimeResult(NumberLiteral(float(self.eat().value)))
+            case "True":
+                self.eat()
+                return RuntimeResult(TrueLiteral())
+            case "False":
+                self.eat()
+                return RuntimeResult(FalseLiteral())
+            case "Null":
+                self.eat()
+                return RuntimeResult(NullLiteral())
+            case "String":
+                return RuntimeResult(StringLiteral(self.eat().value.encode().decode('unicode_escape')))
+            case "OpenParen":
+                self.eat()
+                expression = self.parse_expression()
+                if expression.error:
+                    return RuntimeResult(None, expression.error)
                 
-                inside += [self.eat()]
-            
-            # seperate into arguments
-            arguments = self.parse_elements_in_array(inside)
-            left = CallExpression(left, arguments.value)
-
-        return left
-
-    def parse_fetch_expression(self) -> Expression:
-        left = self.parse_unary_expression()
-        while self.at().type.type == "OpenBracket":
-            self.eat()
-            inside = []
-            stack = []
-            while (self.at().type.type != "CloseBracket" or stack) and self.at().type.type != "EOF":
-                token = self.eat()
-
-                # check for brackets
-                if token.type.type in ("OpenBracket", "OpenParen"):
-                    stack += [token.type.type]
-                elif token.type.type == "CloseParen":
-                    if "OpenParen" not in stack:
-                        print("SyntaxError: Unexpected ')'")
-                        sys.exit(1)
-                    
-                    if stack[0] != "OpenParen":
-                        print("SyntaxError: Unexpected ')'")
-                        sys.exit(1)
-
-                    stack.pop(0)
-                elif token.type.type == "CloseBracket":
-                    if "OpenBracket" not in stack:
-                        print("SyntaxError: Unexpected ']'")
-                        sys.exit(1)
-                    
-                    if stack[0] != "OpenBracket":
-                        print("SyntaxError: Unexpected ']'")
-                        sys.exit(1)
-
-                    stack.pop(0)
+                rt = self.expect("CloseParen", error=SyntaxError("Expected ')'", 99))
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
                 
-                inside += [token]
-            
-            if self.at().type.type == "EOF":
-                print("SyntaxError: Expected ']'")
-                sys.exit(1)
+                return RuntimeResult(expression.result)
+            case "OpenBracket":
+                self.eat()
+                inside = []
+                stack = []
+                while (self.at().type.type != "CloseBracket" or stack) and self.at().type.type != "EOF":
+                    token = self.eat()
+                    if token.type.type in ("OpenBracket", "OpenParen"):
+                        stack += [token.type.type]
+                    elif token.type.type == "CloseParen":
+                        if "OpenParen" not in stack:
+                            return RuntimeResult(None, SyntaxError("Unexpected ')'", 89))
+                        
+                        if stack[0] != "OpenParen":
+                            return RuntimeResult(None, SyntaxError("Unexpected ')'", 6))
 
-            self.eat()
-            parser = Parser(inside + [create_token(TokenType("EOF"), "EOF")])
-            index = parser.parse_expression()
-            left = FetchExpression(left, index)
-        
-        return left
+                        stack.pop(0)
+                    elif token.type.type == "CloseBracket":
+                        if "OpenBracket" not in stack:
+                            return RuntimeResult(None, SyntaxError("Unexpected ']'", 8))
+                        
+                        if stack[0] != "OpenBracket":
+                            return RuntimeResult(None, SyntaxError("Unexpected ']'", 23))
 
-    def parse_unary_expression(self) -> Expression:
-        sign = ""
-        while self.at().type.type == "BinaryOperator" and self.at().value in ("+", "-"):
-            if not sign:
-                sign = self.eat().value
-            elif sign == "-":
-                sign = "+" if sign == "-" else "-"
-        
-        if not sign:
-            return self.parse_primary_expression()
-        
-        return UnaryExpression(sign, self.parse_primary_expression())
-
-    def parse_primary_expression(self) -> Expression:
-        self.skip_tabs()
-        tt = self.at().type.type
-
-        if self.tokens[1].type.type == "EOF" and tt not in ("Identifier", "Null", "Number", "True", "False", "String", "Create"):
-            print(f"SyntaxError: Unexpected token found during parsing: '{self.at()}'")
-            sys.exit(1)
-
-        if tt == "Identifier":
-            identifier = self.eat().value
-            return Identifier(identifier)
-        
-        if tt == "Null":
-            self.eat()
-            return NullLiteral()
-
-        if tt == "Number":
-            value = float(self.eat().value)
-            return NumericLiteral(value)
-        
-        if tt == "True":
-            self.eat()
-            return BooleanLiteral("true")
-
-        if tt == "False":
-            self.eat()
-            return BooleanLiteral("false")
-        
-        if tt == "String":
-            string = self.eat().value
-            return StringLiteral(string)
-
-        if tt == "OpenParen":
-            self.eat()
-            value = self.parse_expression()
-            self.expect(TokenType("CloseParen"), error="Expecting ')'")
-            return value
-
-        # array
-        if tt == "OpenBracket":
-            self.eat()
-            inside = []
-            stack = []
-            while (self.at().type.type != "CloseBracket" or stack) and self.at().type.type != "EOF":
-                token = self.eat()
-
-                # check for brackets
-                if token.type.type in ("OpenBracket", "OpenParen"):
-                    stack += [token.type.type]
-                elif token.type.type == "CloseParen":
-                    if "OpenParen" not in stack:
-                        print("SyntaxError: Unexpected ')'")
-                        sys.exit(1)
+                        stack.pop(0)
                     
-                    if stack[0] != "OpenParen":
-                        print("SyntaxError: Unexpected ')'")
-                        sys.exit(1)
-
-                    stack.pop(0)
-                elif token.type.type == "CloseBracket":
-                    if "OpenBracket" not in stack:
-                        print("SyntaxError: Unexpected ']'")
-                        sys.exit(1)
-                    
-                    if stack[0] != "OpenBracket":
-                        print("SyntaxError: Unexpected ']'")
-                        sys.exit(1)
-
-                    stack.pop(0)
+                    inside += [token]
                 
-                inside += [token]
-            
-            if self.at().type.type == "EOF":
-                print("SyntaxError: Expected ']'")
-                sys.exit(1)
+                if self.at().type.type == "EOF":
+                    return RuntimeResult(None, SyntaxError("Unexpected ']'", 25))
 
-            self.eat()
-            return self.parse_elements_in_array(inside)
+                self.eat()
+                
+                elements = []
+                element = []
+                stack = []
+                for token in inside:
+                    if token.type.type == "Semi" and not stack:
+                        if element:
+                            elements += [element]
+                            element = []
+                    elif not self.in_end(token):
+                        element += [token]
+                    
+                    if token.type.type in ("OpenBracket", "OpenParen"):
+                        stack += [token.type.type]
+                    elif token.type.type == "CloseParen":
+                        if "OpenParen" not in stack:
+                            return RuntimeResult(None, SyntaxError("Unexpected ')'", 63))
+                        
+                        if stack[0] != "OpenParen":
+                            return RuntimeResult(None, SyntaxError("Unexpected ')'", 84))
 
-        print(f"SyntaxError: Unexpected token found during parsing: '{self.at()}'")
-        sys.exit(1)
+                        stack.pop(0)
+                    elif token.type.type == "CloseBracket":
+                        if "OpenBracket" not in stack:
+                            return RuntimeResult(None, SyntaxError("Unexpected ']'", 17))
+                        
+                        if stack[0] != "OpenBracket":
+                            return RuntimeResult(None, SyntaxError("Unexpected ']'", 27))
+
+                        stack.pop(0)
+                
+                if element:
+                    elements += [element]
+
+                new = []
+                for element in elements:
+                    parser = Parser(element + [Token(TokenType("EOF"), "EOF")], self.extension)
+                    rt = parser.parse_expression()
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    new += [rt.result]
+                
+                return RuntimeResult(ArrayLiteral(new))
+            case _:
+                return RuntimeResult(None, SyntaxError(f"Unexpected token found: '{self.at()}'", 11))

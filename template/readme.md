@@ -1,6 +1,8 @@
 # Fluentix Docs: TEST PACKAGE
 ## _Hello!_
 
+[![N|Solid](https://i.ibb.co/sHF7y3D/Powered-by-the-Fluentix-GROUP.png)](http://fluentix.dev)
+
 ---
 ## Welcome!
 This is a test package! Haha, it's very useful when in.... development.
@@ -17,7 +19,7 @@ This package existed on a purpose of testing the implementations of the uploadin
 - It can't display charts (the boards) of the markdown file to the display of the package.
 
 ## Feedbacks:
-Please report us at https://help.fluentix.dev if you got any problems.
+Please report us at http://fluentix.dev if you got any problems.
 
 ## Credits"
 - [@Lam](http://mrlam.dev) - The one who implemented the packages thing.
