@@ -2,6 +2,7 @@ import os
 import sys
 import platform
 import subprocess
+import time
 
 
 def install_requirements():
@@ -13,7 +14,6 @@ def install_requirements():
     except subprocess.CalledProcessError as e:
         print(f"Failed to install packages: {e}")
         sys.exit(1)
-
 
 def create_batch_file(fluentix_path):
     """Create a batch file for Windows."""
@@ -37,14 +37,29 @@ def create_batch_file(fluentix_path):
     with open(batch_file_path2, 'w') as f:
         f.write(batch_file_content)
 
-    print(f'Batch file created at: {batch_file_path}')
-    print('You can run Fluentix by typing `fluentix` in your command prompt.')
-    print('If you encounter a "command not found" error, please add the following directory to your PATH:')
-    print(f'  {os.environ["USERPROFILE"]}')
+    # Add the directory to the system's PATH
+    user_profile_dir = os.environ['USERPROFILE']
+    path_variable = os.environ['PATH']
+    if user_profile_dir not in path_variable:
+        new_path_variable = f"{user_profile_dir};{path_variable}"
+        os.environ['PATH'] = new_path_variable
+        print(f"Added {user_profile_dir} to the system's PATH.")
+
+    print(f'[INFO] Batch file created at: {batch_file_path}')
+    print('[SUCCESS] You can run Fluentix by typing `flu` or `fl` in your command prompt.')
 
 
 def create_shell_script(fluentix_path):
     """Create a shell script for Linux or macOS."""
+    print("[NOTICE] MAKE SURE THIS SCRIPT IS RAN VIA `sudo` else it won't work.")
+    time.sleep(1)
+    try:
+        subprocess.check_call(['python', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("[ERROR] Python is not installed or not found in your PATH.")
+        print("Please install Python from https://www.python.org/downloads/ and ensure it's added to your PATH.")
+        sys.exit(1)
+
     shell_script_content = f'#!/bin/bash\npython "{fluentix_path}" "$@"\n'
     shell_script_path2 = '/usr/local/bin/flu'
     shell_script_path3 = '/usr/local/bin/fl'
