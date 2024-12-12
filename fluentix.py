@@ -1,12 +1,20 @@
 try:
+    """Imports"""
     import os # operating sys stuff
     import random # random verify codes
     import zipfile # zip manager
     import urllib3 # download package
+    import platform
     from fluentixengine import upload # upload package
     from fluentixengine.packages import search_package, insert_data, search_owner, delete_package, search_link, edit_package # get package
     from fluentixengine.sendmail import send_email # send package
-    import readline  # up and down keys shortcuts
+
+    if platform.system() == "Windows":
+        from pyreadline3 import Readline
+        readline = Readline()
+    else:
+        import readline
+
     import sys # system stuff
     import shutil # delete stuff
     import re # email thing
@@ -383,9 +391,9 @@ def upload_package(dir, email, check=True):
     data = [line.split() for line in info]
     data[2] = ' '.join(data[2][1:])  # Clean up description
 
-    package_name = data[0][1]  # Assuming the first line contains the package name
+    package_name = ' '.join(data[0][1:])
     if search_package(package_name):
-        return Fore.YELLOW + f"[WARNING] Package with name '{Fore.YELLOW + package_name + Fore.YELLOW}' already exists. Please choose a different name.\n"
+        return Fore.YELLOW + f"[WARNING] Package with name '{package_name}' already exists. Please choose a different name.\n"
 
     # Ensure the zip file is named correctly
     zip_file_path = os.path.join(dir, f"{package_name}.zip")  # Use package_name for the zip file
@@ -394,7 +402,8 @@ def upload_package(dir, email, check=True):
     # Check of package_name, package_version, package_description length be4 upload
     if len(package_name) < 30 and len(data[1][1].split('.')) <= 4 and len(data[2]) < 300:
         insert_data(download_link, package_name, data[1][1], data[2], email)
-        return Fore.GREEN + "[SUCCESS] Upload completed!"
+        os.remove(zip_file_path)
+        return Fore.GREEN + "[SUCCESS] Upload completed!\nYou can verify if your package if live by visiting " + Fore.CYAN + "https://search.fluentix.dev" + Fore.WHITE
     else:
         return Fore.RED + """[UPLOAD-ERROR#3] Rejected upload, make sure the 'details.fluentix-package' has satisfied the requirements.
 More info at """ + Fore.CYAN + "http://docs.fluentix.dev/rejected-upload"
