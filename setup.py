@@ -15,6 +15,10 @@ def install_requirements():
         print(f"Failed to install packages: {e}")
         sys.exit(1)
 
+import os
+import sys
+import subprocess
+
 def create_batch_file(fluentix_path):
     """Create a batch file for Windows."""
     # Check if Python is installed
@@ -38,15 +42,16 @@ def create_batch_file(fluentix_path):
         f.write(batch_file_content)
 
     # Add the directory to the system's PATH
-    user_profile_dir = os.environ['USERPROFILE']
-    path_variable = os.environ['PATH']
-    if user_profile_dir not in path_variable:
-        new_path_variable = f"{user_profile_dir};{path_variable}"
-        os.environ['PATH'] = new_path_variable
-        print(f"Added {user_profile_dir} to the system's PATH.")
+    directory = os.environ['USERPROFILE']
+    current_path = os.environ['PATH']
+    if directory not in current_path:
+        new_path = f"{directory};{current_path}"
+        os.environ['PATH'] = new_path
+        subprocess.run(['setx', 'PATH', new_path], shell=True)
+        print(f"Added {directory} to the system's PATH variable.")
 
-    print(f'[INFO] Batch file created at: {batch_file_path}')
-    print('[SUCCESS] You can run Fluentix by typing `flu` or `fl` in your command prompt.')
+    print(f'Batch file created at: {batch_file_path}')
+    print('You can run Fluentix by typing `flu` or `fl` in your command prompt.')
 
 
 def create_shell_script(fluentix_path):
