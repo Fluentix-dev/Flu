@@ -484,14 +484,14 @@ def alias_options(option):
         if have_shortcuts:
             display_shortcuts(manage=False)
         else:
-            sys.stdout.write(Fore.YELLOW + "[ERROR-ALIAS#4] No shortcuts available.\nMore info at http://docs.fluentix.dev/console/alias#error-alias4")
+            sys.stdout.write(Fore.YELLOW + "[ERROR-ALIAS#4] No shortcuts available.\nMore info at http://docs.fluentix.dev/console/alias#error-alias4\n")
         return
 
     elif option == '-manage':
         if have_shortcuts:
             display_shortcuts()
         else:
-            sys.stdout.write(Fore.YELLOW + "[ERROR-ALIAS#4] No shortcuts available.\nMore info at http://docs.fluentix.dev/console/alias#error-alias4")
+            sys.stdout.write(Fore.YELLOW + "[ERROR-ALIAS#4] No shortcuts available.\nMore info at http://docs.fluentix.dev/console/alias#error-alias4\n")
             return
         while have_shortcuts:
             if have_shortcuts:
@@ -543,7 +543,7 @@ def alias_options(option):
 
                         elif op.lower() == "a":
                             with open(os.path.dirname(os.path.realpath(__file__)) + '/fluentixdata/shortcuts._fluentix_', 'w') as f:
-                                f.write('\n'.join(list_functions))
+                                f.write('\n'.join(list_functions) + "\n")
                             sys.stdout.write(Fore.GREEN + "Changes applied.\n")
                             break  # Exit the inner loop to refresh the outer loop
 
@@ -573,7 +573,8 @@ def alias(shortcut, command):
     subcommands = ["-show", "-manage"]
     try:
         with open(os.path.dirname(os.path.realpath(__file__)) + '/fluentixdata/shortcuts._fluentix_', 'r') as f:
-            list_functions = f.read().strip().split('\n')
+            list_functions = f.read().split('\n')
+
     except:
         list_functions = ""
 
@@ -591,10 +592,8 @@ def alias(shortcut, command):
         return Fore.RED + f"[ERROR-ALIAS#3] '{shortcut}' is already used. Try again with a different name.\nOr run it by typing 'flu {shortcut}'\nMore info at http://docs.fluentix.dev/alias/error3"
 
     with open(os.path.dirname(os.path.realpath(__file__)) + '/fluentixdata/shortcuts._fluentix_', 'a') as f:
-        if list_functions != "":
-            f.write(f"{shortcut}\n{command}\n")
-        else:
-            f.write(f"\n{shortcut}\n{command}")
+        f.write(f"{shortcut}\n{command}\n")
+
 
     return Fore.GREEN + f"[SUCCESS] Successfully added command '{command}' with shortcut '{shortcut}'!"
 
