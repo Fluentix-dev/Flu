@@ -17,33 +17,37 @@ def install_requirements():
 
 def create_batch_file(fluentix_path):
     """Create a batch file for Windows."""
-    batch_file_content = f'@echo off\npython "{fluentix_path}" %*\n'
-    batch_file_path = os.path.join(os.environ['USERPROFILE'], 'fluentix.bat')
-    batch_file_path2 = os.path.join(os.environ['USERPROFILE'], 'flu.bat')
-    batch_file_path3 = os.path.join(os.environ['USERPROFILE'], 'fl.bat')
+    # Check if Python is installed
+    try:
+        subprocess.check_call(['python', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("[ERROR] Python is not installed or not found in your PATH.")
+        print("Please install Python from https://www.python.org/downloads/ and ensure it's added to your PATH.")
+        sys.exit(1)
 
+    # Create the batch file content
+    batch_file_content = f'@echo off\npy "{fluentix_path}" %*\n'
+    batch_file_path = os.path.join(os.environ['USERPROFILE'], 'flu.bat')
+    batch_file_path2 = os.path.join(os.environ['USERPROFILE'], 'fl.bat')
+
+    # Write the batch file
     with open(batch_file_path, 'w') as f:
         f.write(batch_file_content)
 
     with open(batch_file_path2, 'w') as f:
         f.write(batch_file_content)
 
-    with open(batch_file_path3, 'w') as f:
-        f.write(batch_file_content)
-
     print(f'Batch file created at: {batch_file_path}')
-    print('You may need to add the directory to your PATH if it is not already included.')
+    print('You can run Fluentix by typing `fluentix` in your command prompt.')
+    print('If you encounter a "command not found" error, please add the following directory to your PATH:')
+    print(f'  {os.environ["USERPROFILE"]}')
 
 
 def create_shell_script(fluentix_path):
     """Create a shell script for Linux or macOS."""
     shell_script_content = f'#!/bin/bash\npython "{fluentix_path}" "$@"\n'
-    shell_script_path = '/usr/local/bin/fluentix'
     shell_script_path2 = '/usr/local/bin/flu'
     shell_script_path3 = '/usr/local/bin/fl'
-
-    with open(shell_script_path, 'w') as f:
-        f.write(shell_script_content)
     
     with open(shell_script_path2, 'w') as f:
         f.write(shell_script_content)
@@ -51,11 +55,10 @@ def create_shell_script(fluentix_path):
     with open(shell_script_path3, 'w') as f:
         f.write(shell_script_content)
 
-    os.chmod(shell_script_path, 0o755)  # Make it executable
     os.chmod(shell_script_path2, 0o755)
     os.chmod(shell_script_path3, 0o755)
     
-    print('[SUCCESS] You can run it by typing `fluentix` or `flu` in your terminal.')
+    print('[SUCCESS] You can run it by typing `flu` or `fl` in your terminal.')
 
 
 def main():
