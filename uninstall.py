@@ -15,12 +15,20 @@ def uninstall_requirements():
 
 def remove_batch_file():
     """Remove the Windows batch file (fluentix.bat) if it exists."""
-    batch_file_path = os.path.join(os.environ['USERPROFILE'], 'fluentix.bat')
+    batch_file_path = os.path.join(os.environ['USERPROFILE'], 'flu.bat')
+    batch_file_path2 = os.path.join(os.environ['USERPROFILE'], 'fl.bat')
+
     if os.path.isfile(batch_file_path):
         os.remove(batch_file_path)
-        print('[SUCCESS] Batch file removed.')
     else:
         print('[WARNING] No batch file found to remove.')
+
+    if os.path.isfile(batch_file_path2):
+        os.remove(batch_file_path2)
+    else:
+        print('[WARNING] No batch file found to remove.')
+    
+    print('[SUCCESS] Batch file removed.')
 
 def remove_shell_script():
     """Remove the shell script (fluentix) in /usr/local/bin if it exists."""
