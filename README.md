@@ -1,4 +1,4 @@
-# fluentix: v0.0.1 pre-alpha
+# Fluentix: Official repo.
 
 Official fluentix's repo.
 
