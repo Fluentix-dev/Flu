@@ -22,6 +22,7 @@ try:
     import subprocess
     import time
 except:
+    """Failed imports"""
     import sys
     sys.stdout.write("[INSTALL-ERROR#1] Fluentix is incorrectly installed, refer to https://docs.fluentix.dev/install to retry.")
     sys.exit(1)
