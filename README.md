@@ -18,6 +18,7 @@ Features that Fluentix has.
 - Equations solved
 - `Show` (print) function
 - `Input` / `ask` functiom
+- Modules importing (WIP)
 
 ### Fluentix Syntax
 
@@ -51,6 +52,20 @@ create: unchangeable <var_name> is <value>
 To update a variable, we use: `<var_name> is now <value>`
 
 Way number 1, 2, 4, 6 creates a mutable variable while way number 3, 5, 7 creates a constant.
+
+**Modules Importing**
+
+To import a module:
+
+```
+get: module <module>
+```
+
+To import a file:
+
+```
+get: file <file>
+```
 
 ### Fluentix Console
 
