@@ -10,7 +10,14 @@ def install_requirements():
     try:
         # Install the required packages from requirements.txt
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt', '--user'])
-        print("Successfully installed required packages.")
+        
+        if platform.system() == "Windows":
+            # needed for win
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyreadline3', '--user'])
+            print("Successfully installed required packages.")
+        else:
+            print("Successfully installed required packages.")
+
     except subprocess.CalledProcessError as e:
         print(f"Failed to install packages: {e}")
         sys.exit(1)
