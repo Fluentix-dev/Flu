@@ -26,14 +26,14 @@ def create_batch_file(fluentix_path):
     """Create a batch file for Windows."""
     # Check if Python is installed
     try:
-        subprocess.check_call(['py', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call(['sys.executable', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("[ERROR] Python is not installed or not found in your PATH.")
         print("Please install Python from https://www.python.org/downloads/ and ensure it's added to your PATH.")
         sys.exit(1)
 
     # Create the batch file content
-    batch_file_content = f'@echo off\npy "{fluentix_path}" %*\n'
+    batch_file_content = f'@echo off\n{sys.executable} "{fluentix_path}" %*\n'
     batch_file_path = os.path.join(os.environ['USERPROFILE'], 'flu.bat')
     batch_file_path2 = os.path.join(os.environ['USERPROFILE'], 'fl.bat')
 
@@ -62,13 +62,13 @@ def create_shell_script(fluentix_path):
     print("[NOTICE] MAKE SURE THIS SCRIPT IS RAN VIA `sudo` else it won't work.")
     time.sleep(1)
     try:
-        subprocess.check_call(['py', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call([sys.executable, '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("[ERROR] Python is not installed or not found in your PATH.")
         print("Please install Python from https://www.python.org/downloads/ and ensure it's added to your PATH.")
         sys.exit(1)
 
-    shell_script_content = f'#!/bin/bash\npython "{fluentix_path}" "$@"\n'
+    shell_script_content = f'#!/bin/bash\n{sys.executable} "{fluentix_path}" "$@"\n'
     shell_script_path2 = '/usr/local/bin/flu'
     shell_script_path3 = '/usr/local/bin/fl'
     
