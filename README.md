@@ -14,10 +14,11 @@ Features that Fluentix has.
 
 ### Fluentix Language
 
-- Variables declarations
+- Variables declarations (array, string, list, nums)
 - Equations solved
 - `Show` (print) function
-- `Input` / `ask` functiom
+- `Input` / `ask` function
+- Basic conditions check.
 
 ### Fluentix Syntax
 
@@ -51,6 +52,42 @@ create: unchangeable <var_name> is <value>
 To update a variable, we use: `<var_name> is now <value>`
 
 Way number 1, 2, 4, 6 creates a mutable variable while way number 3, 5, 7 creates a constant.
+
+**Conditions**
+
+To check for something equalivent to something, greater or less than (math):
+
+```
+let a be tonumber: ask: "Enter Number: "
+
+if a = 5
+    show: "a is 5"
+
+unless a < 5
+    show: "a is less than 5"
+
+else
+    show: "a is greater than 5"
+```
+
+Those are the basics.
+
+*Usages for Conditions*
+
+You can start the check by typing:
+
+```
+if <what to check>
+    <do something>
+```
+
+The `<what to check>` is the condition you want to check, if it satisfies (returns *true*), then it will do the `<do something>`.
+
+Also, the `unless` will work if there's an `if` before it, like you want to check for multiple conditions, those structure are the same.
+
+The `else` will work if all of the above `if` and `unless` returns a *false*.
+
+
 
 ### Fluentix Console
 
