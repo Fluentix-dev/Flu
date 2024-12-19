@@ -6,6 +6,10 @@ Official fluentix's repo.
 
 **Below is a poorly made documentation, please stay tuned because Fluentix project is still in very early development.**
 
+**Visit our [official documentation](https://docs.fluentix.dev) page to see available resources.**
+
+**Discord: https://discord.gg/mZNNfuMUVq**
+
 ---
 
 ## Features (at this moment):
@@ -32,9 +36,13 @@ Array starts with a `[` and ends with `]`. To seperate elements, we use `;`.
 
 **ARRAY TIPS**
 
-You can spam as much `;` as you can when seperating elements in an array. The demo image of it is shown in many channels like ⁠memes and ⁠development
+You can spam as much `;` as you can when seperating elements in an array. Below shows the reference:
 
-![N|Solid](https://cdn.discordapp.com/attachments/1309155710504009790/1309343383533125692/Anh_chup_man_hinh_2024-11-21_214702.png?ex=67472b4d&is=6745d9cd&hm=61592b8d73e96eed2228fd8f781e2354f14b4436457f49f6ded38ec52f469186&)
+```
+let a be [1;;;;;;;;;;;;;;2;;;;;;;;;;;;;;;;;;;;;;;;;;;;3]
+```
+
+And it still gonna work.
 
 **Variables**
 
@@ -108,7 +116,7 @@ Get Fluentix via those ways:
 
 ### 1. All-in-one installer (coming soon)
 
-It will be available in the future. http://fluentix.dev/downloads
+It will be available in the future. https://fluentix.dev/get
 
 ### 2. Python
 
