@@ -22,7 +22,6 @@ try:
     import subprocess
     import time
 except:
-    """Failed imports"""
     import sys
     sys.stdout.write("[INSTALL-ERROR#1] Fluentix is incorrectly installed, refer to https://docs.fluentix.dev/install to retry.")
     sys.exit(1)
@@ -210,6 +209,7 @@ def manage_selected_package(package, email):
     o = True
 
     while True:
+
         if o == True:
             if os.name == 'nt':  # For Windows
                 os.system('cls')
@@ -238,45 +238,70 @@ def manage_selected_package(package, email):
             clean_console()
             
         elif option == 'I':
+
+            changes = False
+
             while True:
                 clean_console()
                 sys.stdout.write("--------------------------------------------------------------\n")
-                sys.stdout.write(f"Editing information for package {package_name}...\n")
+                sys.stdout.write(f"Editing information for package: {package_name}...\n")
                 sys.stdout.write(f"[1] Package Name: {package_name}\n")
                 sys.stdout.write(f"[2] Package Version: {package_version}\n")
                 sys.stdout.write(f"[3] Package Description: {package_description}\n")
                 sys.stdout.write(f"[4] Package Ownership: {package_owner}\n")
-                sys.stdout.write("[S] Save: Save changes and exit.\n")
+                if not changes:
+                    sys.stdout.write("[S] Save: Save changes and exit.\n")
+                else:
+                    sys.stdout.write("[S] Save: Save changes and exit (UNSAVED CHANGES).\n")
+
                 sys.stdout.write("[X] Exit: Exit without saving.\n")
                 
                 edit_option = input("Select an option to edit or save: ").strip().upper()
                 
                 if edit_option == '1':
+                    clean_console()
                     sys.stdout.write("--------------------------------------------------------------\n")
-                    clean_console()
+                    sys.stdout.write("[INFO] Type '_X_' to discard changes\n")
                     new_name = input("Enter new package name: ")
-                    package_name = new_name  # Update the variable to reflect the change
-                    clean_console()
+                    if new_name.lower() != '_x_':
+                        package_name = new_name  # Update the variable to reflect the change
+                        changes = True
+                        clean_console()
+                    else:
+                        clean_console()
                 elif edit_option == '2':
                     sys.stdout.write("--------------------------------------------------------------\n")
                     clean_console()
+                    sys.stdout.write("[INFO] Type '_X_' to discard changes\n")
                     new_version = input("Enter new package version: ")
-                    package_version = new_version  # Update the variable to reflect the change
-                    clean_console()
+                    if new_version.lower() != '_x_':
+                        package_version = new_version  # Update the variable to reflect the change
+                        changes = True
+                        clean_console()
+                    else:
+                        clean_console()
                 elif edit_option == '3':
                     sys.stdout.write("--------------------------------------------------------------\n")
                     clean_console()
                     sys.stdout.write("[INFO] Type '_X_' to discard changes\n")
                     new_description = input("[INPUT] Enter new package brief description: ")
                     if new_description.lower() != '_x_':     
+                        changes = True
                         package_description = new_description  # Update the variable to reflect the change
                         clean_console()
+                    else:
+                        clean_console()
                 elif edit_option == '4':
+                    clean_console()
                     sys.stdout.write("--------------------------------------------------------------\n")
-                    clean_console()
+                    sys.stdout.write("[INFO] Type '_X_' to discard changes\n")
                     new_owner = input("Enter new package owner: ")
-                    package_owner = new_owner  # Update the variable to reflect the change
-                    clean_console()
+                    if new_owner.lower() != '_x_':
+                        changes = True
+                        package_owner = new_owner  # Update the variable to reflect the change
+                        clean_console()
+                    else:
+                        clean_console()
                 elif edit_option == 'S' or edit_option == "s":
                     # Save changes to the database
                     if len(package_name) < 30 and len(package_version.split('.')) <= 4 and len(package_description[2]) < 300:
@@ -285,9 +310,13 @@ def manage_selected_package(package, email):
                         sys.stdout.write(Fore.GREEN + "[SUCCESS] Saved changes.")
                         break  # Exit editing menu
                 elif edit_option.lower() == 'x':
-                    option = input("Are you sure? (y/n): ")
-                    if option == "Y" or option == "y":
-                        sys.stdout.write("Exiting without saving changes.\n")
+                    if changes:
+                        option = input("Are you sure? (y/n): ")
+                        if option == "Y" or option == "y":
+                            sys.stdout.write("[INFO] Exiting without saving changes.\n")
+                        else:
+                            clean_console()
+                            continue
                     break  # Exit editing menu
                 else: 
                     sys.stdout.write("Invalid option. Please select a valid option.\n")
@@ -305,6 +334,7 @@ def manage_selected_package(package, email):
                     clean_console()
                     return
                 
+            else:
                 i = input("Continue to stay in this dialog? (Y/N): ")
                 if i == "N" or i == "n":
                     o = True
@@ -317,7 +347,7 @@ def manage_selected_package(package, email):
             clean_console()
         elif option == 'X':
             sys.stdout.write("[INFO] Exiting management menu.\n")
-            break
+            return "exit"
         else:
             sys.stdout.write(Fore.YELLOW + "[WARNING] Invalid option. Please enter a valid option.\n")
     
@@ -338,14 +368,17 @@ def manage_uploads(email):
     sys.stdout.write(f"Owner: {email}\n")
     sys.stdout.write("Uploaded packages: \n")
     
-    for index, package in enumerate(have_packages, start=1):
-        package_name = package[1]  # The name of the package
-        package_version = package[2]  # The version of the package
-        sys.stdout.write(f"[{index}] {package_name}: {package_version}\n")
-    
-    sys.stdout.write(f"[X] Close\n")
+    def printi():
+        for index, package in enumerate(have_packages, start=1):
+            package_name = package[1]  # The name of the package
+            package_version = package[2]  # The version of the package
+            sys.stdout.write(f"[{index}] {package_name}: {package_version}\n")
+        sys.stdout.write(f"[X] Close\n")
+        choice = input("Type the number of the desired package to manage it: ")
+        return choice
+
     # Prompt user to select a package by number
-    choice = input("Type the number of the desired package to manage it: ")
+    choice = printi()
     
     while True:
         if choice == "x" or choice == "X":
@@ -359,10 +392,15 @@ def manage_uploads(email):
                 if stop == "quit":
                     clean_console()
                     break
-            else:
-                sys.stdout.write("Invalid selection, try again.")
+                elif stop == "exit":
+                    clean_console()
+                    break
+
         except ValueError:
-            return "Invalid input. Please enter a number."
+            sys.stdout.write(Fore.YELLOW + "[WARNING] Invalid option, try again.\n" + Fore.WHITE)
+            time.sleep(1)
+            clean_console()
+            choice = printi()
 
 def upload_template(dir):
     if dir == None:
@@ -437,25 +475,26 @@ def install_package(package):
 def uninstall_package(package_name):
     """Uninstalls a package by removing it from the database and filesystem."""
     # First, check if the package is installed
-    with open(os.path.dirname(os.path.realpath(__file__)) + '/fluentixdata/installed._fluentix_', 'r') as f:
+    sets = os.path.dirname(os.path.realpath(__file__))
+    with open(sets + '/fluentixdata/installed._fluentix_', 'r') as f:
         installed = f.read().splitlines()
 
     if package_name not in installed:
-        return Fore.YELLOW + f"[WARNING] Package '{package_name}' is not installed.\nSee installed packages: 'fluentix installed'.\n"
+        return Fore.YELLOW + f"[WARNING] Package '{package_name}' is not installed.\nSee installed packages: 'flu installed'.\n"
 
     option = input("Are you sure (y/n): ")
     if option == "Y" or option == "y":
         # Remove the package entry from the installed list
         installed.remove(package_name)
-        with open(os.path.dirname(os.path.realpath(__file__)) + '/fluentixdata/installed._fluentix_', 'w') as f:
-            f.write('\n'.join(installed))
+        with open(sets + '/fluentixdata/installed._fluentix_', 'w') as f:
+            f.write('\n'.join(installed) + "\n")
 
         # Remove the package files from the filesystem
-        package_path = os.path.join(os.path.realpath(__file__) + "/packages/", package_name)  # Assuming packages are stored in a 'packages' directory
+        package_path = os.path.join(sets + "/packages", package_name)  # Assuming packages are stored in a 'packages' directory
         if os.path.exists(package_path):
             try:
                 shutil.rmtree(package_path)  # Use shutil.rmtree to remove the directory and its contents
-                return Fore.GREEN + f"[SUCCESS] " + Fore.WHITE + f"Package '{package_name}' has been uninstalled successfully."
+                return Fore.GREEN + f"[SUCCESS] " + Fore.YELLOW + f"Package '{package_name}' has been uninstalled successfully."
             except Exception as e:
                 return Fore.RED + f"[UNINSTALL-ERROR#1] Error removing package files: {e}"
         else:
@@ -603,19 +642,19 @@ def better_help(command):
     #commands = ["help", "credits", "upload", "version", "installed", "update", "install", "uninstall", "reinstall", "manage-packages", "manage-package","clean", "alias"]
 
     functions = {
-        "version" : "Command version shows current Fluentix version.\nUsage: fluentix version\nGet new releases at http://fluentix.dev",
-        "credits" : "Shows the developers and contributors of Fluentix.\nUsage: fluentix credits\nContribute at http://fluentix.dev/contribute",
-        "alias" : "Creates shortcut for a command. Best used if command is long.\nUsage: fluentix alias <shortcut/mode> <command>\nDetailed guide at http://docs.fluentix.dev/alias",
-        "installed" : "Shows installed packages.\nUsage: fluentix installed\nMore info at http://docs.fluentix.dev/installed",
-        "check" : "Checks if you have installed Fluentix correctly.\nUsage: fluentix check\nIf it returns an error, try again at https://docs.fluentix.dev/install",
-        "upload" : "(Web version coming soon) Uploads a package from your computer to the database.\nUsage: fluentix upload <package-directory> <email>\nHow to upload: http://docs.fluentix.dev/upload",
-        "update" : "Update packages/Fluentix (if new version found).\nUsage: fluentix update <fluentix/package1> <package2> ...\nMore info at: http://docs.fluentix.dev/update",
-        "install" : "Install packages (if multi packages were given) from Fluentix's database.\nUsage: fluentix install <package1> <package2> ... \nYou can easily search for packages at http://lib.fluentix.dev",
-        "reinstall" : "Reinstall packages (if multi packages were given). That package should be existed on your computer else it can't be performed.\nUsage: fluentix reinstall <package1> <package2> ...",
-        "uninstall" : "Uninstall packages (if multi packages were given). That package should be existed on your computer else it can't be performed.\nUsage: fluentix uninstall <package1> <package2> ...",
-        "manage-packages" : "(Web version coming soon) A place to manage your packages.\nUsage: fluentix manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
-        "manage-package" : "(Web version coming soon) A place to manage your packages.\nUsage: fluentix manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
-        "clean" : "Clears out the terminal.\nUsage: fluentix clean\nMore info can be found at: http://docs.fluentix.dev/clean",
+        "version" : "Command version shows current Fluentix version.\nUsage: flu version\nGet new releases at http://fluentix.dev",
+        "credits" : "Shows the developers and contributors of Fluentix.\nUsage: flu credits\nContribute at http://fluentix.dev/contribute",
+        "alias" : "Creates shortcut for a command. Best used if command is long.\nUsage: flu alias <shortcut/mode> <command>\nDetailed guide at http://docs.fluentix.dev/alias",
+        "installed" : "Shows installed packages.\nUsage: flu installed\nMore info at http://docs.fluentix.dev/installed",
+        "check" : "Checks if you have installed Fluentix correctly.\nUsage: flu check\nIf it returns an error, try again at https://docs.fluentix.dev/install",
+        "upload" : "(Web version coming soon) Uploads a package from your computer to the database.\nUsage: flu upload <package-directory> <email>\nHow to upload: http://docs.fluentix.dev/upload",
+        "update" : "Update packages/Fluentix (if new version found).\nUsage: flu update <fluentix/package1> <package2> ...\nMore info at: http://docs.fluentix.dev/update",
+        "install" : "Install packages (if multi packages were given) from Fluentix's database.\nUsage: flu install <package1> <package2> ... \nYou can easily search for packages at http://lib.fluentix.dev",
+        "reinstall" : "Reinstall packages (if multi packages were given). That package should be existed on your computer else it can't be performed.\nUsage: flu reinstall <package1> <package2> ...",
+        "uninstall" : "Uninstall packages (if multi packages were given). That package should be existed on your computer else it can't be performed.\nUsage: flu uninstall <package1> <package2> ...",
+        "manage-packages" : "(Web version coming soon) A place to manage your packages.\nUsage: flu manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
+        "manage-package" : "(Web version coming soon) A place to manage your packages.\nUsage: flu manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
+        "clean" : "Clears out the terminal.\nUsage: flu clean\nMore info can be found at: http://docs.fluentix.dev/clean",
         "exit" : "Exits runtime (only works when using fluentix runtime).\nUsage: (only in fluentix runtime) exit\nMore info: " + Fore.BLUE + "http://docs.fluentix.dev/exit"
     }
 
@@ -712,14 +751,20 @@ def do_func(mode, arguments, cmd):
                 installed = f.readlines()
             if not installed:
                 return Fore.YELLOW + "[NOTICE] No packages installed right now, how about installing one?"
-            return "Installed packages: " + ", ".join(pkg.strip() for pkg in installed)
+            
+            if installed[0] != "\n":
+                return "Installed packages: " + "\n".join(pkg.strip() for pkg in installed)
+            
+            else:
+                return "[NOTICE] No packages have been installed yet."
+
         except FileNotFoundError:
-            return "[NOTICE] No packages have been installed yet.\n"
+            return "[NOTICE] No packages have been installed yet."
         
     elif mode == "install":
         # do install
         if not arguments or not cmd:
-            return "Usage: fluentix install <package1> <package2> ...\nMore info by typing 'fluentix help install'."
+            return "Usage: flu install <package1> <package2> ...\nMore info by typing 'fluentix help install'."
         cmd = cmd.split(',')
         for arg in cmd:
             arg = ' '.join(map(str, arg.split()))
@@ -732,7 +777,6 @@ def do_func(mode, arguments, cmd):
             return "Usage: flu install <package1> <package2> ...\nMore info by typing 'flu help install'."
         cmd = cmd.split(',')
         for arg in cmd:
-            arg = arg.replace(' ', '')
             sys.stdout.write(uninstall_package(arg))
         return
     
@@ -827,7 +871,8 @@ def main():
                 if fluentix_command.count('.flu') != 0 or fluentix_command.count('.fl') != 0:
                     try:
                         import flu
-                        flu.execute_code(fluentix)
+                        with open(fluentix) as file:
+                            flu.execute_code(file.read(), run_file[1].lower())
                     except FileNotFoundError:
                         sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#1] File not found for '{sys.argv[1]}' in dir {os.getcwd()}\nMore info at http://docs.fluentix.dev/faq/file/error1")
                         exit()
@@ -843,7 +888,8 @@ def main():
                     # run file functionality
                     try:
                         import flu
-                        flu.execute_code(fluentix)
+                        with open(fluentix) as file:
+                            flu.execute_code(file.read(), run_file[1].lower())
                     except FileNotFoundError:
                         sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#1] File not found for '{sys.argv[1]}' in dir {os.getcwd()}\nMore info at http://docs.fluentix.dev/file/error1\n")
 
@@ -859,7 +905,8 @@ def main():
                 # run file functionality
                 try:
                     import flu
-                    flu.execute_code(fluentix)
+                    with open(fluentix) as file:
+                        flu.execute_code(file.read(), run_file[1].lower())
                 except FileNotFoundError:
                     sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#1] File not found for '{sys.argv[1]}' in dir {os.getcwd()}\nMore info at http://docs.fluentix.dev/file/error1\n")
 
@@ -926,7 +973,6 @@ if __name__ == '__main__':
                 sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#2] Enter a valid extension, got '{Fore.YELLOW + run_file[1] + Fore.RED}'.\n" + Fore.WHITE + "More info at " + Fore.BLUE + "http://docs.fluentix.dev/file/error2\n")
                 exit(1)
         except IndexError:
-            sys.argv[1:]
             prase()
     except IndexError:
         exit()

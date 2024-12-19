@@ -40,17 +40,17 @@ class Parser:
     def produce_ast(self):
         program = Program([])
         while self.not_eof():
-            self.skip_tab()
+            while self.at().type.type == "Newline":
+                self.eat()
+
             if self.at().type.type == "EOF":
                 return RuntimeResult(program)
-            
+
             rt = self.parse_statement()
             if rt.error:
                 return RuntimeResult(None, rt.error)
-            
+
             program.body += [rt.result]
-            while self.at().type.type == "Newline":
-                self.eat()
 
         return RuntimeResult(program)
 
@@ -81,19 +81,20 @@ class Parser:
                         return RuntimeResult(None, rt.error)
                     
                     return RuntimeResult(rt.result)
-            case "Identifier":
-                saved = self.eat()
-                if self.at().type.type == "Is":
-                    self.tokens = [saved] + self.tokens
-                    rt = self.parse_update_statement()
-                    if rt.error:
-                        return RuntimeResult(None, rt.error)
-                    
-                    return RuntimeResult(rt.result)
-        
-                self.tokens = [saved] + self.tokens
+            case "If":
+                rt = self.parse_if_unless_else()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
             case "Get":
                 rt = self.parse_get_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Define":
+                rt = self.parse_function_declaration()
                 if rt.error:
                     return RuntimeResult(None, rt.error)
                 
@@ -103,6 +104,11 @@ class Parser:
         if rt.error:
             return RuntimeResult(None, rt.error)
         
+        if self.at().type.type == "Is":
+            rt = self.parse_update_statement(rt.result)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
         return RuntimeResult(rt.result)
 
     def parse_variable_keyword_assignment(self):
@@ -205,8 +211,7 @@ class Parser:
                 
                 return RuntimeResult(rt.result)
 
-    def parse_update_statement(self):
-        identifier = self.eat().value
+    def parse_update_statement(self, identifier):
         self.eat()
         rt = self.expect("Now", error=SyntaxError(f"Expected 'now', got '{self.at().value}'", 92))
         if rt.error:
@@ -223,6 +228,10 @@ class Parser:
 
     def parse_get_statement(self):
         self.eat()
+        rt = self.expect("Colon", error=SyntaxError("Expected ':'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
         rt = self.expect("Module", error=SyntaxError("Expected 'module'", 99)) # unexpected
         if rt.error:
             return RuntimeResult(None, rt.error)
@@ -235,6 +244,121 @@ class Parser:
             return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 99)) # unexpected
 
         return RuntimeResult(GetStatement(rt.result.value))
+
+    def parse_if_unless_else(self):
+        # Consume the "if" token
+        self.eat()  # Eat "if"/"unless"
+
+        # Parse the "if" condition
+        condition_tokens = []
+        while not self.in_end(self.at()):
+            condition_tokens += [self.eat()]
+
+        # Parse the condition expression
+        condition_parser = Parser(condition_tokens + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = condition_parser.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+
+        condition = rt.result
+
+        body = []
+        while self.not_eof():
+            while self.at().type.type == "Newline":
+                body += [self.tokens.pop(0)]
+            
+            if self.at().type.type != "Tab":
+                break
+            
+            self.tokens.pop(0)
+            while not self.in_end(self.at()):
+                body += [self.tokens.pop(0)]
+        
+        parser = Parser(body + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = parser.produce_ast()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        body = rt.result
+        match self.at().type.type:
+            case "Unless":
+                rt = self.parse_if_unless_else()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(IfUnlessElseStatement(condition, body, rt.result))
+            case "Else":
+                self.eat()
+                else_body = []
+                while self.not_eof():
+                    while self.at().type.type == "Newline":
+                        else_body += [self.tokens.pop(0)]
+                    
+                    # check for tab
+                    if self.at().type.type != "Tab":
+                        break
+                    
+                    self.tokens.pop(0)
+                    while not self.in_end(self.at()):
+                        else_body += [self.tokens.pop(0)]
+                
+                parser = Parser(else_body + [Token(TokenType("EOF"), "EOF")], self.extension)
+                rt = parser.produce_ast()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                else_body = rt.result
+                return RuntimeResult(IfUnlessElseStatement(condition, body, IfUnlessElseStatement(TrueLiteral(), else_body)))
+            case _:
+                return RuntimeResult(IfUnlessElseStatement(condition, body)) # next is reserved for unless/else
+
+    def parse_function_declaration(self):
+        self.eat()
+        rt = self.expect("Identifier", error=SyntaxError("Expected identifier", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        func_name = rt.result.value
+        rt = self.expect("With", error=SyntaxError("Expected 'with'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.expect("Colon", error=SyntaxError("Expected ':'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        arguments = []
+        while not self.in_end(self.at()):
+            rt = self.expect("Identifier", error=SyntaxError("Expected 'identifier'", 99)) # unexpected
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            arguments += [rt.result.value]
+            if self.in_end(self.at()):
+                break
+
+            rt = self.expect("Semi", error=SyntaxError("Expected ';'", 99)) # unexpected
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+        
+        body = []
+        while self.not_eof():
+            while self.at().type.type == "Newline":
+                body += [self.tokens.pop(0)]
+            
+            if self.at().type.type != "Tab":
+                break
+            
+            self.tokens.pop(0)
+            while not self.in_end(self.at()):
+                body += [self.tokens.pop(0)]
+        
+        parser = Parser(body + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = parser.produce_ast()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        body = rt.result        
 
     def parse_expression(self):
         rt = self.parse_comparison_expression()
@@ -254,7 +378,7 @@ class Parser:
             right = self.parse_additive_expression()
             if right.error:
                 return RuntimeResult(None, right.error)
-            
+
             left = ComparisonExpression(left, right.result, operator.type.type)
         
         return RuntimeResult(left)

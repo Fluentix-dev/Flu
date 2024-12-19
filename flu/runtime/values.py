@@ -38,6 +38,11 @@ class Environment:
             self.constants.add(var_name)
 
         return RuntimeResult(None, None)
+    
+    def copy(self):
+        env = Environment()
+        env.parent = self
+        return env
 
 class ValueType:
     def __init__(self, type):
@@ -168,9 +173,9 @@ def translate_python_to_fluentix(value):
     
     if isinstance(value, (list, tuple, set)):
         new = []
-        for element in new:
+        for element in value:
             new += [translate_python_to_fluentix(element)]
-        
+
         return Array(new)
     
     return RuntimeResult(None, DataTypeError(f"Invalid data type in Python not translated to Fluentix: {type(value)}", 15))

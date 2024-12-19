@@ -11,8 +11,7 @@ You can freely reply to this email to report a bug.
 
 From, Lam, one of the developers of Fluentix:
 
-http://fluentix.dev
-http://mrlam.dev"""
+http://fluentix.dev"""
 
     # Your email credentials
     from_email = "nglamdztop1ff@gmail.com"  # Replace with your email

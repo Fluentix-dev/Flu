@@ -102,9 +102,9 @@ def main(path):
     if is_package_installed() and do():
         return upload_file(path)
 
-    print(f"{Fore.WHITE}[INFO] In order to use command 'upload/manage-package', you would have to install an additional of approximately 19 MBs for the 'Upload extension'.")
+    sys.stdout.write(f"{Fore.WHITE}[INFO] In order to use command 'upload/manage-package', you would have to install an additional of approximately 19 MBs for the 'Upload extension'.\n")
 
-    user_input = input(f"{Fore.WHITE}Would you like to continue installing the missing packages (y/n)? ").strip().lower()
+    user_input = input(f"{Fore.WHITE}[INPUT] Would you like to continue installing the missing packages (y/n)? ").strip().lower()
 
     if user_input == 'y':
         for package in packages:

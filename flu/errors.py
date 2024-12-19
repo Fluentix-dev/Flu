@@ -16,7 +16,7 @@ class Error:
         self.reason = reason
     
     def show_error(self):
-        print(f"{self.error.type}#{self.error_code}: {self.reason}\nLearn more at https://docs.fluentix.dev/code/")
+        print(f"{self.error.type}#{self.error_code}: {self.reason}\nLearn more at https://docs.fluentix.dev/error/{self.error.type}{self.error_code}")
         sys.exit(self.error_code)
 
 class SyntaxError(Error):
@@ -46,3 +46,7 @@ class ArgumentError(Error):
 class ModuleError(Error):
     def __init__(self, reason, error_code):
         super().__init__(ErrorType("ModuleError"), reason, error_code)
+
+class ValueError(Error):
+    def __init__(self, reason, error_code):
+        super().__init__(ErrorType("ValueError", reason, error_code))

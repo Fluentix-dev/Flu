@@ -26,7 +26,7 @@ def create_batch_file(fluentix_path):
     """Create a batch file for Windows."""
     # Check if Python is installed
     try:
-        subprocess.check_call([sys.executable , '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call([sys.executable, '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("[ERROR] Python is not installed or not found in your PATH.")
         print("Please install Python from https://www.python.org/downloads/ and ensure it's added to your PATH.")

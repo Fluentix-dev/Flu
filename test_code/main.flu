@@ -1,6 +1,2 @@
-let option be input: "Select option (1->5): "
-
-if option > 5
-    show: "Invalid selection, try again!"
-else
-    show: "You chose"; option; "!"
+show: 1
+show: 2

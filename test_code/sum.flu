@@ -1,4 +1,0 @@
-let a be input: "a = "
-let b be input: "b = "
-
-show: "Sum of a, b: "; a + b

@@ -1,4 +1,4 @@
-from ..errors import RuntimeResult, MathError, InterpreterError, DataTypeError, ModuleError
+from ..errors import *
 from .values import *
 
 def evaluate_program(ast_node, environment):
@@ -98,6 +98,12 @@ def evaluate(ast_node, environment):
                 return RuntimeResult(None, rt.error)
             
             return RuntimeResult(rt.result)
+        case "IfUnlessElseStatement":
+            rt = evaluate_if_unless_else_statement(ast_node, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(rt.result)
         case _:
             return RuntimeResult(None, InterpreterError(f"This AST node has not been setup for interpretion yet: {ast_node}", 35))
 
@@ -113,30 +119,57 @@ def evaluate_assignment_statement(ast_node, environment):
     return RuntimeResult(None)
 
 def evaluate_update_statement(ast_node, environment):
-    rt = evaluate(ast_node.value, environment)
-    if rt.error:
-        return RuntimeResult(None, rt.error)
-    
-    rt = environment.update(ast_node.identifier, rt.result)
-    if rt.error:
-        return RuntimeResult(None, rt.error)
-    
-    return RuntimeResult(None)
+    match ast_node.identifier.kind.type:
+        case "Identifier":
+            rt = evaluate(ast_node.value, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            rt = environment.update(ast_node.identifier.symbol, rt.result)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            return RuntimeResult(None)
+        case "CallExpression":
+            callee = ast_node.identifier.callee
+            rt = evaluate(callee, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+
+            if rt.result.type.type != "array":
+                return RuntimeResult(None, DataTypeError(f"Expected array, got {rt.result.type.type}"))
+            
+            array = rt.result
+            rt = evaluate(ast_node.identifier.arguments[0], environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            if rt.result.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Expected number, got {rt.result.type.type}", 99)) # unexpected
+            
+            if rt.result.value % 1 > 0:
+                return RuntimeResult(None, ValueError(f"Expected integer, got remainder {rt.result.value % 1}/1", 99)) # unexpected
+
+            if rt.result.value > len(array.value):
+                return RuntimeResult(None, ValueError(f"Expected a number smaller than or equals{len(array)}, got {rt.result.value}", 99)) # unexpected
+            
+            if rt.result.value < 1:
+                return RuntimeResult(None, ValueError(f"Expected a number larger than 0, got {rt.result.value}", 99)) # unexpected
+
+            index = rt.result.value - 1
+            rt = evaluate(ast_node.value, environment)
+            if rt.error:
+                return RuntimeResult(None, rt.error)
+            
+            array.value[index] = rt.result
+            return RuntimeResult(None)
 
 def evaluate_get_statement(ast_node, environment):
     module = ast_node.module
     match module:
-        case "conversions":
-            import flu.runtime.conversions
-            environment.assign("conversions", Module("conversions"), True)
-            rt = environment.lookup("conversions")
-            if rt.error:
-                return RuntimeResult(None, rt.error)
-            
-            module = rt.result
-            module.assign("to_number", NativeFunction("to_number", flu.runtime.conversions.to_number, 1))
-            return RuntimeResult(None)
+        # import module
         case _:
+            # anything that is shit
             return RuntimeResult(None, ModuleError(f"No module named {module}", 99)) # unexpected
 
 def evaluate_identifier(ast_node, environment):
@@ -174,7 +207,7 @@ def evaluate_call_expression(ast_node, environment):
     if rt.error:
         return RuntimeResult(None, rt.error)
     
-    if rt.result.type.type not in ("native function", "module"):
+    if rt.result.type.type not in ("native function", "module", "array"):
         return RuntimeResult(None, DataTypeError(f"Expected native function or module, got {rt.result.type.type}", 5))
     
     match rt.result.type.type:
@@ -187,7 +220,7 @@ def evaluate_call_expression(ast_node, environment):
                     return RuntimeResult(None, rt.error)
                 
                 arguments += [translate_fluentix_to_python(rt.result)]
-            
+
             rt = callee.call(arguments)
             if rt.error:
                 return RuntimeResult(None, rt.error)
@@ -196,34 +229,42 @@ def evaluate_call_expression(ast_node, environment):
         case "module":
             if len(ast_node.arguments) != 1:
                 return RuntimeResult(None, ArgumentError(f"Expected 1 function in '{rt.result.callee.symbol}', got {len(ast_node.arguments)}/1"))
-            
-            if rt.error:
-                return RuntimeResult(None, rt.error)
-            
-            func = ast_node.arguments[0]
-            
-            rt = environment.lookup(ast_node.callee.symbol)
-            if rt.error:
-                return RuntimeResult(None, rt.error)
-            
-            rt = rt.result.lookup(func.callee.symbol)
+
+            rt = environment.lookup(rt.result.name)
             if rt.error:
                 return RuntimeResult(None, rt.error)
 
-            func = rt.result
-            arguments = []
-            for argument in ast_node.arguments[0].arguments:
-                rt = evaluate(argument, environment)
-                if rt.error:
-                    return RuntimeResult(None, rt.error)
-                
-                arguments += [translate_fluentix_to_python(rt.result)]
-            
-            rt = func.call(arguments)
+            match ast_node.arguments[0].kind.type:
+                case "CallExpression":
+                    rt = evaluate_call_expression(ast_node.arguments[0], rt.result)
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    return RuntimeResult(rt.result)
+                case _:
+                    return RuntimeResult(None, SyntaxError("Invalid Syntax!", 99)) # unexpected
+        case "array":
+            array = rt.result
+            if len(ast_node.arguments) != 1:
+                return RuntimeResult(None, ArgumentError(f"Expected 1 number in '{rt.result.callee.symbol}, got {len(ast_node.arguments)}/1", 99)) # unexpected
+
+            rt = evaluate(ast_node.arguments[0], environment)
             if rt.error:
                 return RuntimeResult(None, rt.error)
             
-            return RuntimeResult(translate_python_to_fluentix(rt.result))
+            if rt.result.type.type != "number":
+                return RuntimeResult(None, DataTypeError(f"Expected number, got {rt.result.type.type}", 99)) # unexpected
+            
+            if rt.result.value % 1 > 0:
+                return RuntimeResult(None, ValueError(f"Expected integer, got remainder {rt.result.value % 1}/1", 99)) # unexpected
+
+            if rt.result.value > len(array.value):
+                return RuntimeResult(None, ValueError(f"Expected a number smaller than or equals{len(array)}, got {rt.result.value}", 99)) # unexpected
+            
+            if rt.result.value < 1:
+                return RuntimeResult(None, ValueError(f"Expected a number larger than 0, got {rt.result.value}", 99)) # unexpected
+
+            return RuntimeResult(array.value[rt.result.value-1])
 
 def evaluate_unary_expression(ast_node, environment):
     rt = evaluate(ast_node.value, environment)
@@ -260,6 +301,11 @@ def evaluate_binary_expression(ast_node, environment):
                         return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 42))
                     
                     return RuntimeResult(create_number(left.value + right.value))
+                case "string":
+                    if right.type.type != "string":
+                        return RuntimeResult(None, DataTypeError(f"Unexpected operation between number and {right.type.type}", 99)) # unexpected
+                    
+                    return RuntimeResult(String(left.value + right.value))
                 case _:
                     return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 7))
         case "Minus":
@@ -364,3 +410,25 @@ def evaluate_comparison_expression(ast_node, environment):
                     return RuntimeResult(Boolean("false"))
                 case _:
                     return RuntimeResult(None, DataTypeError(f"Unexpected operation between {left.type.type} and {right.type.type}", 99)) # unexpected
+                
+
+def evaluate_if_unless_else_statement(ast_node, environment):
+    rt = evaluate(ast_node.condition, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+
+    if rt.result.type.type == "boolean" and rt.result.value == "true":
+        rt = evaluate(ast_node.body, environment)
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        return RuntimeResult(rt.result)
+
+    if not ast_node.next:
+        return RuntimeResult(None, rt.error)
+    
+    rt = evaluate_if_unless_else_statement(ast_node.next, environment)
+    if rt.error:
+        return RuntimeResult(None, rt.error)
+    
+    return RuntimeResult(rt.result)

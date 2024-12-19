@@ -140,3 +140,13 @@ class GetStatement(Statement):
     
     def __repr__(self):
         return f"(GET STATEMENT {self.module})"
+
+class IfUnlessElseStatement(Statement):
+    def __init__(self, condition, body, next=None):
+        super().__init__(NodeType("IfUnlessElseStatement"))
+        self.condition = condition
+        self.body = body
+        self.next = next
+    
+    def __repr__(self):
+        return f"(IF UNLESS ELSE STATEMENT {self.condition})"

@@ -28,7 +28,12 @@ def define_keywords(extension):
         "false": TokenType("False"),
         "null": TokenType("Null"),
         "get": TokenType("Get"),
-        "module": TokenType("Module")
+        "module": TokenType("Module"),
+        "if": TokenType("If"),
+        "unless": TokenType("Unless"),
+        "else": TokenType("Else"),
+        "define": TokenType("Define"),
+        "with": TokenType("With")
     }
 
     if extension == "fl":
@@ -156,6 +161,10 @@ def tokenize(code, extension):
                     string = ""
                     flag = True
                     while src:
+                        if src[0] == quote:
+                            flag = False
+                            break
+
                         string += src[0]
                         if src[0] == "\\":
                             src.pop(0)
@@ -165,9 +174,6 @@ def tokenize(code, extension):
                             string += src.pop(0)
                         
                         src.pop(0)
-                        if src[0] == quote:
-                            flag = False
-                            break
                     
                     if flag:
                         return RuntimeResult(None, SyntaxError(f"Expected '{quote}'", 83))
