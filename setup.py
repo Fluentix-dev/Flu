@@ -33,7 +33,7 @@ def create_batch_file(fluentix_path):
         sys.exit(1)
 
     # Create the batch file content
-    batch_file_content = f'@echo off\n{sys.executable} "{fluentix_path}" %*\n'
+    batch_file_content = f'@echo off\n"{sys.executable}" "{fluentix_path}" %*\n'
     batch_file_path = os.path.join(os.environ['USERPROFILE'], 'flu.bat')
     batch_file_path2 = os.path.join(os.environ['USERPROFILE'], 'fl.bat')
 
