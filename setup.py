@@ -47,11 +47,10 @@ def create_batch_file(fluentix_path):
     # Add the directory to the system's PATH
     directory = os.environ['USERPROFILE']
     current_path = os.environ['PATH']
-    if directory not in current_path:
-        new_path = f"{directory};{current_path}"
-        os.environ['PATH'] = new_path
-        subprocess.run(['setx', 'PATH', new_path], shell=True)
-        print(f"Added {directory} to the system's PATH variable.")
+    new_path = f"{directory};{current_path}"
+    os.environ['PATH'] = new_path
+    subprocess.run(['setx', 'PATH', new_path], shell=True)
+    print(f"Added {directory} to the system's PATH variable.")
 
     print(f'Batch file created at: {batch_file_path}')
     print('You can run Fluentix by typing `flu` or `fl` in your command prompt.')
