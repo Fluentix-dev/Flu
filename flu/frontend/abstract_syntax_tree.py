@@ -150,3 +150,21 @@ class IfUnlessElseStatement(Statement):
     
     def __repr__(self):
         return f"(IF UNLESS ELSE STATEMENT {self.condition})"
+
+class FunctionDeclarationStatement(Statement):
+    def __init__(self, func_name, arguments, body):
+        super().__init__(NodeType("FunctionDeclarationStatement"))
+        self.func_name = func_name
+        self.arguments = arguments
+        self.body = body
+    
+    def __repr__(self):
+        return f"(FUNCTION DECLARATION STATEMENT {self.func_name} with arguments {self.arguments})"
+
+class ReturnStatement(Statement):
+    def __init__(self, value):
+        super().__init__(NodeType("ReturnStatement"))
+        self.value = value
+    
+    def __repr__(self):
+        return f"(RETURN STATEMENT {self.value})"

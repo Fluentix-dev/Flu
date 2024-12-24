@@ -33,7 +33,8 @@ def define_keywords(extension):
         "unless": TokenType("Unless"),
         "else": TokenType("Else"),
         "define": TokenType("Define"),
-        "with": TokenType("With")
+        "with": TokenType("With"),
+        "return": TokenType("Return")
     }
 
     if extension == "fl":

@@ -20,7 +20,7 @@ def main():
             return True
 
         else:
-            sys.stdout.write("[WARNING] Feature requires proper internet connection (which is failed). Try reconnecting.\n")
+            sys.stdout.write("[WARNING] Feature requires proper internet connection (which is failed). Try a different network.\n")
             sys.stdout.write(f"Status code: {response.status}")
 
             return False
@@ -61,7 +61,7 @@ def fetch_data():
             query = "SELECT * FROM packages"
             cursor.execute(query)
             records = cursor.fetchall()
-            print(f"Total number of rows in table: {cursor.rowcount}")
+            #print(f"Total number of rows in table: {cursor.rowcount}")
 
             for row in records:
                 print(row)

@@ -1,4 +1,5 @@
 from ..errors import RuntimeResult, VariableError, DataTypeError, ArgumentError
+import flu.runtime.interpreter as interpreter
 
 class Environment:
     def __init__(self, parent=None):
@@ -11,7 +12,7 @@ class Environment:
             if not self.parent:
                 return RuntimeResult(None, VariableError(f"Cannot get the value of variable {var_name} because it does not exist.", 35))
 
-            rt = self.parent.resolve(var_name)
+            rt = self.parent.lookup(var_name)
             if rt.error:
                 return RuntimeResult(None, rt.error)
             
@@ -51,6 +52,15 @@ class ValueType:
 class RuntimeValue:
     def __init__(self, type):
         self.type = type
+
+# unrelated but useful runtime values
+class Return(RuntimeValue):
+    def __init__(self, value):
+        super().__init__(ValueType("Return"))
+        self.value = value
+
+    def __repr__(self):
+        return f"<return {self.value}>"
 
 class Module(RuntimeValue):
     def __init__(self, name):
@@ -132,6 +142,35 @@ class NativeFunction(RuntimeValue):
     def __repr__(self):
         return f"<function {self.name}>"
 
+class DefinedFunction(RuntimeValue):
+    def __init__(self, name, value, arguments):
+        super().__init__(ValueType("defined function"))
+        self.name = name
+        self.value = value
+        self.arguments = arguments
+    
+    def call(self, arguments, environment):
+        if len(arguments) != len(self.arguments):
+            return RuntimeResult(None, ArgumentError(f"Expected {len(self.arguments)} arguments in {self.name}, got {len(arguments)}/{len(self.arguments)}", 39))
+
+        env = Environment(environment)
+        for i, argument in enumerate(arguments):
+            env.table.update({self.arguments[i]: argument})
+            if self.arguments[i] in env.constants:
+                env.constants.remove(self.arguments[i])
+        
+        rt = interpreter.evaluate(self.value, env, in_function=True)
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        if isinstance(rt.result, Return):
+            return RuntimeResult(rt.result.value)
+        
+        return RuntimeResult(rt.result)
+    
+    def __repr__(self):
+        return f"<function {self.name}>"
+
 def create_number(value):
     return Number(int(value) if value % 1 == 0 else value)
 
@@ -154,6 +193,10 @@ def translate_fluentix_to_python(value):
                 new += [translate_fluentix_to_python(element)]
             
             return new
+        case "defined function":
+            return value
+        case "native function":
+            return value
 
 def translate_python_to_fluentix(value):
     if isinstance(value, bool):
@@ -177,5 +220,8 @@ def translate_python_to_fluentix(value):
             new += [translate_python_to_fluentix(element)]
 
         return Array(new)
+    
+    if isinstance(value, (DefinedFunction, NativeFunction)):
+        return value
     
     return RuntimeResult(None, DataTypeError(f"Invalid data type in Python not translated to Fluentix: {type(value)}", 15))

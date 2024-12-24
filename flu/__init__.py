@@ -22,6 +22,7 @@ def execute_code(code, extension):
     # math
     global_environment.assign("absolute", NativeFunction("absolute", flu.runtime.builtin_functions.absolute, 1), True)
 
+
     rt = tokenize(code, extension)
     if rt.error:
         rt.error.show_error()

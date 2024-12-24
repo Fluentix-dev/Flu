@@ -13,7 +13,7 @@ def do():
         document_content = response.data.decode('utf-8-sig')
         with open(os.path.dirname(os.path.abspath(__file__)) + "/file.json", 'w', encoding='utf-8') as file:
             file.write(document_content)
-        sys.stdout.write(Fore.GREEN + "\n[SUCCESS]" + Fore.YELLOW + " Fetch data success!\n")
+        sys.stdout.write(Fore.GREEN + "\n[SUCCESS]" + Fore.YELLOW + " Data Fetched.\n")
         return True
     else:
         print(Fore.RED + f'[ERROR] Failed to retrieve document: {response.status} - {response.data.decode("utf-8")}\n')

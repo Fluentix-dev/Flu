@@ -389,10 +389,7 @@ def manage_uploads(email):
             if 0 <= choice_index < len(have_packages):
                 selected_package = have_packages[choice_index]
                 stop = manage_selected_package(selected_package, email)
-                if stop == "quit":
-                    clean_console()
-                    break
-                elif stop == "exit":
+                if stop == "quit" or stop == "exit":
                     clean_console()
                     break
 
@@ -407,7 +404,7 @@ def upload_template(dir):
         dir = os.getcwd()
     try:
         shutil.copytree(os.path.dirname(os.path.abspath(__file__))+"/template", dir, symlinks=False, ignore=None, ignore_dangling_symlinks=False, dirs_exist_ok=True)
-        sys.stdout.write(Fore.GREEN + f"[SUCCESS] A folder of upload template has successfully copied to {dir} !")
+        sys.stdout.write(Fore.GREEN + f"[SUCCESS] Upload template has successfully copied to {dir} !")
     except NotADirectoryError:
         sys.stdout.write(Fore.RED + "[NOT-A-DIR-ERROR] Not a directory, please double check the sent path.\n" + Fore.WHITE + "More info at: " + Fore.BLUE + "http://docs.fluentix.dev/not-a-dir")
         return

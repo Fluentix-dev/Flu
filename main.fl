@@ -1,0 +1,14 @@
+let N be 4
+let M be 6
+let Q be 2
+
+let G be [
+    [3, 4, 2, 6, 3, 2],
+    [1, 1, 7, 7, 1, 7],
+    [2, 8, 9, 1, 2, 9],
+    [3, 4, 3, 2, 3, 2],
+    ]
+
+define robot with: i, j, x
+    if i >= N
+        return 0

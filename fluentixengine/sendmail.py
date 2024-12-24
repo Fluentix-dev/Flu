@@ -13,17 +13,14 @@ From, Lam, one of the developers of Fluentix:
 
 http://fluentix.dev"""
 
-    # Your email credentials
-    from_email = "nglamdztop1ff@gmail.com"  # Replace with your email
-    app_password = "tril mcas htbk wqyp"     # Replace with your app password
+    from_email = "nglamdztop1ff@gmail.com"
+    app_password = "tril mcas htbk wqyp"
 
-    # Create the email
     msg = MIMEMultipart()
     msg['From'] = from_email
     msg['To'] = to_email
     msg['Subject'] = subject
 
-    # Attach the email body
     msg.attach(MIMEText(body, 'plain'))
 
     try:

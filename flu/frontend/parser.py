@@ -99,6 +99,12 @@ class Parser:
                     return RuntimeResult(None, rt.error)
                 
                 return RuntimeResult(rt.result)
+            case "Return":
+                rt = self.parse_return_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
 
         rt = self.parse_expression()
         if rt.error:
@@ -358,7 +364,20 @@ class Parser:
         if rt.error:
             return RuntimeResult(None, rt.error)
         
-        body = rt.result        
+        body = rt.result
+        return RuntimeResult(FunctionDeclarationStatement(func_name, arguments, body))
+
+    def parse_return_statement(self):
+        self.eat()
+        if self.in_end(self.at()):
+            return RuntimeResult(ReturnStatement(NullLiteral()))
+        
+        parser = Parser(self.tokens + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = parser.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        return RuntimeResult(ReturnStatement(rt.result))
 
     def parse_expression(self):
         rt = self.parse_comparison_expression()

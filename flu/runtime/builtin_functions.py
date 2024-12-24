@@ -64,5 +64,3 @@ def absolute(arguments):
         except:
             pass
     return RuntimeResult(None, DataTypeError(f"Absolute value '{value}' must be a number.", 99)) # unexpec
-
-
