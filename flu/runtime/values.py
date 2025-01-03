@@ -1,4 +1,4 @@
-from ..errors import RuntimeResult, VariableError, DataTypeError, ArgumentError
+from ..errors import RuntimeResult, VariableError, DataTypeError, ArgumentError, StopError
 import flu.runtime.interpreter as interpreter
 
 class Environment:
@@ -61,6 +61,13 @@ class Return(RuntimeValue):
 
     def __repr__(self):
         return f"<return {self.value}>"
+
+class Stop(RuntimeValue):
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return "<stop>"
 
 class Module(RuntimeValue):
     def __init__(self, name):
@@ -149,7 +156,7 @@ class DefinedFunction(RuntimeValue):
         self.value = value
         self.arguments = arguments
     
-    def call(self, arguments, environment):
+    def call(self, arguments, environment, in_loop):
         if len(arguments) != len(self.arguments):
             return RuntimeResult(None, ArgumentError(f"Expected {len(self.arguments)} arguments in {self.name}, got {len(arguments)}/{len(self.arguments)}", 39))
 
@@ -159,10 +166,16 @@ class DefinedFunction(RuntimeValue):
             if self.arguments[i] in env.constants:
                 env.constants.remove(self.arguments[i])
         
-        rt = interpreter.evaluate(self.value, env, in_function=True)
+        rt = interpreter.evaluate(self.value, env, True)
         if rt.error:
             return RuntimeResult(None, rt.error)
         
+        if isinstance(rt.result, Stop):
+            if not in_loop:
+                return RuntimeResult(None, StopError("Cannot break outside of loop", 99)) # unexpected
+            
+            return RuntimeResult(None)
+
         if isinstance(rt.result, Return):
             return RuntimeResult(rt.result.value)
         

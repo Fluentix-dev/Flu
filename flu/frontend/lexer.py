@@ -34,12 +34,28 @@ def define_keywords(extension):
         "else": TokenType("Else"),
         "define": TokenType("Define"),
         "with": TokenType("With"),
-        "return": TokenType("Return")
+        "return": TokenType("Return"),
+        "repeat": TokenType("Repeat"),
+        "until": TokenType("Until"),
+        "stop": TokenType("Stop"),
+        "include": TokenType("Include"),
+        "to": TokenType("To"),
+        "exclude": TokenType("Exclude"),
+        "from": TokenType("From"),
+        "element": TokenType("Element"),
+        "at": TokenType("At")
     }
 
     if extension == "fl":
-        KEYWORDS.update({"create": TokenType("Create"), "changeable": TokenType("Changeable"), "unchangeable": TokenType("Unchangeable")})
-    
+        KEYWORDS.update({
+            "create": TokenType("Create"),
+            "changeable": TokenType("Changeable"),
+            "unchangeable": TokenType("Unchangeable"),
+            "function": TokenType("Function"),
+            "break": TokenType("Break"),
+            "forever": TokenType("Forever")
+        })
+
     return KEYWORDS
 
 DIGITS = digits + "."

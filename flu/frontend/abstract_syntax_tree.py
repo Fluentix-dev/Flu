@@ -168,3 +168,46 @@ class ReturnStatement(Statement):
     
     def __repr__(self):
         return f"(RETURN STATEMENT {self.value})"
+
+class UntilStatement(Statement):
+    def __init__(self, condition, body):
+        super().__init__(NodeType("UntilStatement"))
+        self.condition = condition
+        self.body = body
+    
+    def __repr__(self):
+        return f"(UNTIL STATEMENT with condition {self.condition})"
+    
+class StopStatement(Statement):
+    def __init__(self):
+        super().__init__(NodeType("StopStatement"))
+    
+    def __repr__(self):
+        return "(STOP STATEMENT)"
+
+class ForeverStatement(Statement):
+    def __init__(self, body):
+        super().__init__(NodeType("ForeverStatement"))
+        self.body = body
+    
+    def __repr__(self):
+        return "(FOREVER STATEMENT)"
+
+class IncludeStatement(Statement):
+    def __init__(self, array, element, index=None):
+        super().__init__(NodeType("IncludeStatement"))
+        self.array = array
+        self.element = element
+        self.index = index
+    
+    def __repr__(self):
+        return "(INCLUDE STATEMENT)"
+
+class ExcludeStatement(Statement):
+    def __init__(self, array, index):
+        super().__init__(NodeType("ExcludeStatement"))
+        self.array = array
+        self.index = index
+    
+    def __repr__(self):
+        return "(EXCLUDE STATEMENT)"

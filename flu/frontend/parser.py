@@ -105,6 +105,50 @@ class Parser:
                     return RuntimeResult(None, rt.error)
                 
                 return RuntimeResult(rt.result)
+            case "Until":
+                rt = self.parse_until_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Repeat":
+                rt = self.parse_repeat_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+
+                return RuntimeResult(rt.result)
+            case "Stop":
+                rt = self.parse_stop_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Break":
+                if self.extension == "fl":
+                    rt = self.parse_stop_statement()
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    return RuntimeResult(rt.result)
+            case "Forever":
+                if self.extension == "fl":
+                    rt = self.parse_forever_statement()
+                    if rt.error:
+                        return RuntimeResult(None, rt.error)
+                    
+                    return RuntimeResult(rt.result)
+            case "Include":
+                rt = self.parse_include_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Exclude":
+                rt = self.parse_exclude_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
 
         rt = self.parse_expression()
         if rt.error:
@@ -186,7 +230,7 @@ class Parser:
         if rt.error:
             return RuntimeResult(None, rt.error)
         
-        rt = self.expect("Variable", "Constant", "Changeable", "Unchangeable", error=SyntaxError("Expected 'variable', 'constant', 'changeable' or 'unchangeable'", 97))
+        rt = self.expect("Variable", "Constant", "Changeable", "Unchangeable", "Function", error=SyntaxError("Expected 'variable', 'constant', 'changeable' or 'unchangeable'", 97))
         if rt.error:
             return RuntimeResult(None, rt.error)
         
@@ -212,6 +256,12 @@ class Parser:
                 return RuntimeResult(rt.result)
             case "Unchangeable":
                 rt = self.parse_constant_keyword_assignment()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            case "Function":
+                rt = self.parse_function_declaration()
                 if rt.error:
                     return RuntimeResult(None, rt.error)
                 
@@ -378,6 +428,135 @@ class Parser:
             return RuntimeResult(None, rt.error)
         
         return RuntimeResult(ReturnStatement(rt.result))
+
+    def parse_until_statement(self):
+        self.eat()
+        condition_tokens = []
+        while not self.in_end(self.at()):
+            condition_tokens += [self.eat()]
+
+        # Parse the condition expression
+        condition_parser = Parser(condition_tokens + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = condition_parser.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+
+        condition = rt.result
+
+        body = []
+        while self.not_eof():
+            while self.at().type.type == "Newline":
+                body += [self.tokens.pop(0)]
+            
+            if self.at().type.type != "Tab":
+                break
+            
+            self.tokens.pop(0)
+            while not self.in_end(self.at()):
+                body += [self.tokens.pop(0)]
+        
+        parser = Parser(body + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = parser.produce_ast()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        body = rt.result
+        return RuntimeResult(UntilStatement(condition, body))
+
+    def parse_repeat_statement(self):
+        self.eat()
+        rt = self.expect("Colon", error=SyntaxError("Expected ':'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.expect("Until", error=SyntaxError("Expected 'until'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        self.tokens = [rt.result] + self.tokens
+        match rt.result.type.type:
+            case "Until":
+                rt = self.parse_until_statement()
+                if rt.error:
+                    return RuntimeResult(None, rt.error)
+                
+                return RuntimeResult(rt.result)
+            
+    def parse_stop_statement(self):
+        self.eat()
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 99)) # unexpected
+        
+        return RuntimeResult(StopStatement())
+
+    def parse_forever_statement(self):
+        self.eat()
+        if not self.in_end(self.at()):
+            return RuntimeResult(None, SyntaxError(f"Expected newline or nothing, got '{self.at().value}'", 99)) # unexpected
+        
+        body = []
+        while self.not_eof():
+            while self.at().type.type == "Newline":
+                body += [self.tokens.pop(0)]
+            
+            if self.at().type.type != "Tab":
+                break
+            
+            self.tokens.pop(0)
+            while not self.in_end(self.at()):
+                body += [self.tokens.pop(0)]
+        
+        parser = Parser(body + [Token(TokenType("EOF"), "EOF")], self.extension)
+        rt = parser.produce_ast()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        body = rt.result
+        return RuntimeResult(ForeverStatement(body))
+
+    def parse_include_statement(self):
+        self.eat()
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        element = rt.result
+        rt = self.expect("To", error=SyntaxError("Expected 'to'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        array = rt.result
+        return RuntimeResult(IncludeStatement(array, element))
+
+    def parse_exclude_statement(self):
+        self.eat()
+        rt = self.expect("Element", error=SyntaxError("Expected 'element'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.expect("At", error=SyntaxError("Expected 'at'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        index = rt.result
+        rt = self.expect("From", error=SyntaxError("Expected 'from'", 99)) # unexpected
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        rt = self.parse_expression()
+        if rt.error:
+            return RuntimeResult(None, rt.error)
+        
+        array = rt.result
+        return RuntimeResult(ExcludeStatement(array, index))
 
     def parse_expression(self):
         rt = self.parse_comparison_expression()

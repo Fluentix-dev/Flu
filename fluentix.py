@@ -46,8 +46,9 @@ Fluentix v0.0.1 - Command Reference (https://docs.fluentix.dev/console)
 ├── Runtime:
 │   └── -runtime                : Enters Fluentix's runtime.
 │
-├── File Execution: (More info at https://docs.fluentix.dev/console/file-execution)
-│   └── <file.flu/file.fl> <args...> : Execute a Fluentix file with optional arguments.
+├── Code Execution: (More info at https://docs.fluentix.dev/console)
+│   ├── <file.flu/file.fl> <args...> : Execute a Fluentix file with optional arguments.
+│   └── execute                      : Lively executes Fluentix code on console.
 │
 ├── Package Management: (More info at https://docs.fluentix.dev/console/packages)
 │   ├── installed               : List all installed packages.
@@ -74,7 +75,7 @@ try:
 except FileNotFoundError:
     shortcuts = ""
 
-commands = ["help", "credits", "upload", "version", "installed", "update", "install", "uninstall", "reinstall", "manage-packages", "manage-package","clean", "alias", "upload-template", "check"]
+commands = ["help", "credits", "upload", "version", "installed", "update", "install", "uninstall", "reinstall", "manage-packages", "manage-package","clean", "alias", "upload-template", "check", "execute"]
 subcommands = ["-runtime"]
 
 def clean_console():
@@ -203,8 +204,8 @@ def manage_selected_package(package, email):
     """Manage the selected package."""
     package_name = package[1]
     package_version = package[2]
-    package_description = package[3]  # Assuming package description is at index 3
-    package_owner = package[4]  # Assuming package owner is at index 4
+    package_description = package[3]
+    package_owner = package[4] 
 
     o = True
 
@@ -652,7 +653,8 @@ def better_help(command):
         "manage-packages" : "(Web version coming soon) A place to manage your packages.\nUsage: flu manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
         "manage-package" : "(Web version coming soon) A place to manage your packages.\nUsage: flu manage-packages <email>\nMore info can be found at: http://docs.fluentix.dev/manage-package",
         "clean" : "Clears out the terminal.\nUsage: flu clean\nMore info can be found at: http://docs.fluentix.dev/clean",
-        "exit" : "Exits runtime (only works when using fluentix runtime).\nUsage: (only in fluentix runtime) exit\nMore info: " + Fore.BLUE + "http://docs.fluentix.dev/exit"
+        "exit" : "Exits runtime (only works when using fluentix runtime).\nUsage: (only in fluentix runtime) exit\nMore info: " + Fore.BLUE + "http://docs.fluentix.dev/exit",
+        "execute" : "Executes Fluentix code inside cmd/terminal.\nUsage: flu execute\nMore info can be found at http://docs.fluentix.dev/execute#terminal"
     }
 
     if command in functions:
@@ -827,6 +829,13 @@ def do_func(mode, arguments, cmd):
     elif mode == "check":
         # checks if installed correctly
         return check()
+    
+    elif mode == "execute":
+        sys.stdout.write("[INFO] Entered Fluentix's live code execution.\n")
+        import flu
+        return flu.execute_cmd() 
+    
+
 
 def do_sub(command, arg=None, source=False):
     """Do subcommands"""

@@ -14,9 +14,6 @@ class Error:
         self.error = error
         self.error_code = error_code
         self.reason = reason
-
-    def detailed_view():
-        pass
     
     def show_error(self):
         print(f"{self.error.type}#{self.error_code}: {self.reason}\nLearn more at https://docs.fluentix.dev/error/{self.error.type}{self.error_code}")
@@ -52,8 +49,12 @@ class ModuleError(Error):
 
 class ValueError(Error):
     def __init__(self, reason, error_code):
-        super().__init__(ErrorType("ValueError", reason, error_code))
+        super().__init__(ErrorType("ValueError"), reason, error_code)
 
 class ReturnError(Error):
     def __init__(self, reason, error_code):
         super().__init__(ErrorType("ReturnError"), reason, error_code)
+
+class StopError(Error):
+    def __init__(self, reason, error_code):
+        super().__init__(ErrorType("StopError"), reason, error_code)
