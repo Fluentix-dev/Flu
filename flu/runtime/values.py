@@ -1,11 +1,29 @@
 from ..errors import RuntimeResult, VariableError, DataTypeError, ArgumentError, StopError
 import flu.runtime.interpreter as interpreter
+import flu.runtime.builtin_functions
 
 class Environment:
-    def __init__(self, parent=None):
+    def __init__(self, extension, parent=None):
         self.table = {}
         self.parent = parent
         self.constants = set()
+        self.extension = extension
+
+        if not self.parent:
+            # normal
+            self.assign("show", NativeFunction("show", flu.runtime.builtin_functions.show), True)
+            self.assign("ask", NativeFunction("ask", flu.runtime.builtin_functions.ask), True)
+            if self.extension == "fl":
+                self.assign("input", NativeFunction("input", flu.runtime.builtin_functions.ask), True)
+            
+            self.assign("stop", NativeFunction("stop", flu.runtime.builtin_functions.stop, 1), True)
+
+            # conversions
+            self.assign("tonumber", NativeFunction("tonumber", flu.runtime.builtin_functions.tonumber, 1), True)
+            self.assign("tostring", NativeFunction("tostring", flu.runtime.builtin_functions.tostring, 1), True)
+
+            # math
+            self.assign("absolute", NativeFunction("absolute", flu.runtime.builtin_functions.absolute, 1), True)
     
     def lookup(self, var_name):
         if var_name not in self.table:
@@ -41,7 +59,7 @@ class Environment:
         return RuntimeResult(None, None)
     
     def copy(self):
-        env = Environment()
+        env = Environment(extension=self.extension)
         env.parent = self
         return env
 
@@ -160,13 +178,13 @@ class DefinedFunction(RuntimeValue):
         if len(arguments) != len(self.arguments):
             return RuntimeResult(None, ArgumentError(f"Expected {len(self.arguments)} arguments in {self.name}, got {len(arguments)}/{len(self.arguments)}", 39))
 
-        env = Environment(environment)
+        env = environment.copy()
         for i, argument in enumerate(arguments):
             env.table.update({self.arguments[i]: argument})
             if self.arguments[i] in env.constants:
                 env.constants.remove(self.arguments[i])
         
-        rt = interpreter.evaluate(self.value, env, True)
+        rt = interpreter.evaluate(self.value, env, True, in_loop, False)
         if rt.error:
             return RuntimeResult(None, rt.error)
         

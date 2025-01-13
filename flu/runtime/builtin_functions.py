@@ -1,9 +1,9 @@
 import sys
 from ..errors import RuntimeResult, DataTypeError, SyntaxError
-from .values import translate_python_to_fluentix
+import flu.runtime.values as v
 
 def show(arguments, newline=True):
-    sys.stdout.write(" ".join([translate_python_to_fluentix(argument).__repr__() for argument in arguments]))
+    sys.stdout.write(" ".join([v.translate_python_to_fluentix(argument).__repr__() for argument in arguments]))
     if newline:
         sys.stdout.write("\n")
 

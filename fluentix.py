@@ -138,7 +138,7 @@ def unzip_file(zip_file_path, destination):
     except Exception as e:
         return Fore.RED + f"[ZIP-ERROR] An error occurred while unzipping: {e}\nThe module might have some problem with it's zip, please contact the dev at " + Fore.YELLOW + search_package(os.path.splitext(os.path.basename(zip_file_path))[0])
     
-def download_file(name, url, zip_path="packages/my_package.zip"):
+def download_file(name, url, zip_path=os.path.dirname(os.path.realpath(__file__))+"packages/my_package.zip"):
     """Downloads a file from a URL and unzips it."""
     # Ensure name is used correctly
     package_name = name  # Assuming name is the package name directly
@@ -602,7 +602,7 @@ def alias_options(option):
                     sys.stdout.write(Fore.RED + "[ERROR] Invalid selection. Try again.\n")
                     time.sleep(1)
             except (ValueError, IndexError):
-                sys.stdout.write(Fore.RED + "[ERROR] Invalid input . Please enter a valid option.\n")
+                sys.stdout.write(Fore.RED + "[ERROR] Invalid input. Please enter a valid option.\n")
                 time.sleep(1)
 
 def alias(shortcut, command):
@@ -911,10 +911,13 @@ def main():
                 # run file functionality
                 try:
                     import flu
-                    with open(fluentix) as file:
+                    if fluentix_command[1] == "-runtime":
+                        fluentix_command[1] = fluentix_command[2]
+
+                    with open(fluentix_command[1]) as file:
                         flu.execute_code(file.read(), run_file[1].lower())
                 except FileNotFoundError:
-                    sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#1] File not found for '{sys.argv[1]}' in dir {os.getcwd()}\nMore info at http://docs.fluentix.dev/file/error1\n")
+                    sys.stdout.write(Fore.RED + f"[EXECUTE-ERROR#1] File not found for '{fluentix_command[1]}' in dir {os.getcwd()}\nMore info at http://docs.fluentix.dev/file/error1\n")
 
         except KeyboardInterrupt:
             sys.stdout.write("\n[NOTICE] Force Quitting terminal...\n")

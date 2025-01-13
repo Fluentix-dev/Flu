@@ -31,6 +31,7 @@ def define_keywords(extension):
         "module": TokenType("Module"),
         "if": TokenType("If"),
         "unless": TokenType("Unless"),
+        "elif" : TokenType("Unless"),
         "else": TokenType("Else"),
         "define": TokenType("Define"),
         "with": TokenType("With"),

@@ -1,6 +1,6 @@
 from .frontend.lexer import tokenize
 from .frontend.parser import Parser
-from .runtime.interpreter import evaluate
+import flu.runtime.interpreter as interpreter
 from .runtime.values import Environment, NativeFunction, Return, Stop
 from .errors import ReturnError, StopError
 import sys
@@ -8,22 +8,8 @@ import flu.runtime.builtin_functions
 
 def execute_code(code, extension):
     try:
-        global_environment = Environment()
-        
-        # normal
-        global_environment.assign("show", NativeFunction("show", flu.runtime.builtin_functions.show), True)
-        global_environment.assign("ask", NativeFunction("ask", flu.runtime.builtin_functions.ask), True)
-        if extension == "fl":
-            global_environment.assign("input", NativeFunction("input", flu.runtime.builtin_functions.ask), True)
-        
-        global_environment.assign("stop", NativeFunction("stop", flu.runtime.builtin_functions.stop, 1), True)
-
-        # conversions
-        global_environment.assign("tonumber", NativeFunction("tonumber", flu.runtime.builtin_functions.tonumber, 1), True)
-        global_environment.assign("tostring", NativeFunction("tostring", flu.runtime.builtin_functions.tostring, 1), True)
-
-        # math
-        global_environment.assign("absolute", NativeFunction("absolute", flu.runtime.builtin_functions.absolute, 1), True)
+        interpreter.FILE_EXTENSION = extension
+        global_environment = Environment(extension=interpreter.FILE_EXTENSION)
 
         rt = tokenize(code, extension)
         if rt.error:
@@ -38,7 +24,7 @@ def execute_code(code, extension):
         
         #print(f"Tree: {rt.result}\n")
 
-        rt = evaluate(rt.result, global_environment)
+        rt = interpreter.evaluate(rt.result, global_environment, False, False, False)
         if rt.error:
             rt.error.show_error()
         
@@ -47,25 +33,16 @@ def execute_code(code, extension):
         if isinstance(rt.result, Return):
             error = ReturnError("Cannot return outside of function", 99) # unexpected
             error.show_error()
+        
+        if isinstance(rt.Result, Stop):
+            error = StopError("Cannot break outside of loop", 99) # unexpected
+            error.show_error()
     except KeyboardInterrupt:
         sys.stdout.write("\n[INFO] Process force quitted")
 
 def execute_cmd():
-    global_environment = Environment()
-
-    # normal
-    global_environment.assign("show", NativeFunction("show", flu.runtime.builtin_functions.show), True)
-    global_environment.assign("ask", NativeFunction("ask", flu.runtime.builtin_functions.ask), True)
-    global_environment.assign("input", NativeFunction("input", flu.runtime.builtin_functions.ask), True)
-    
-    global_environment.assign("stop", NativeFunction("stop", flu.runtime.builtin_functions.stop, 1), True)
-
-    # conversions
-    global_environment.assign("tonumber", NativeFunction("tonumber", flu.runtime.builtin_functions.tonumber, 1), True)
-    global_environment.assign("tostring", NativeFunction("tostring", flu.runtime.builtin_functions.tostring, 1), True)
-
-    # math
-    global_environment.assign("absolute", NativeFunction("absolute", flu.runtime.builtin_functions.absolute, 1), True)
+    interpreter.FILE_EXTENSION = "fl"
+    global_environment = Environment(extension=interpreter.FILE_EXTENSION)
 
     sys.stdout.write("flu >> ")
     sys.stdout.flush()
@@ -87,7 +64,7 @@ def execute_cmd():
             
             #print(f"Tree: {rt.result}\n")
 
-            rt = evaluate(rt.result, global_environment)
+            rt = interpreter.evaluate(rt.result, global_environment)
             if rt.error:
                 rt.error.show_error()
             
