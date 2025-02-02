@@ -14,9 +14,7 @@ class FluentixInstallerApp(ctk.CTk):
         self.geometry("600x475")
 
         self.eula_acpt = False
-        # This will keep track of our current progress value for smooth animation.
         self.current_progress = 0.0
-        # Flag to control whether the progress bar should continue updating.
         self.progress_updating = True
 
         self.disp_eula()
@@ -28,8 +26,7 @@ class FluentixInstallerApp(ctk.CTk):
     def disp_eula(self):
         """Display the EULA acceptance screen."""
         self.cls_window()
-
-        # Welcome Label
+        
         self.label = ctk.CTkLabel(
             self,
             text="Welcome to Fluentix!",
@@ -38,7 +35,6 @@ class FluentixInstallerApp(ctk.CTk):
         )
         self.label.pack(pady=10)
 
-        # Discord Info Label
         self.label = ctk.CTkLabel(
             self,
             text="Join our Discord server (fluentix.dev/discord) for news and updates!",
@@ -46,13 +42,12 @@ class FluentixInstallerApp(ctk.CTk):
             justify="center",
         )
         self.label.pack(pady=10)
-
-        # EULA Textbox
+        
         self.eula_tbox = ctk.CTkTextbox(
             self,
             width=560,
             height=200,
-            wrap="none",  # Prevent wrapping
+            wrap="none",
             font=("Consolas", 12),
         )
         self.eula_tbox.pack(pady=10, padx=10)
@@ -78,9 +73,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.""",
         )
-        self.eula_tbox.configure(state="disabled")  # Disable editing
+        self.eula_tbox.configure(state="disabled")
 
-        # Appearance Mode Option Menu
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(
             self,
             values=["Light", "Dark", "System"],
@@ -88,7 +82,6 @@ SOFTWARE.""",
         )
         self.appearance_mode_optionemenu.pack(pady=10)
 
-        # EULA Acceptance Checkbox
         self.acp_var = ctk.BooleanVar()
         self.eula_checkbox = ctk.CTkCheckBox(
             self,
@@ -99,7 +92,6 @@ SOFTWARE.""",
         )
         self.eula_checkbox.pack(pady=10)
 
-        # Next Button
         self.next_button = ctk.CTkButton(
             self,
             text="Next",
@@ -142,24 +134,21 @@ SOFTWARE.""",
         )
         self.install_button.pack(pady=20)
 
-        # Console output box
         self.console_output = ctk.CTkTextbox(
             self,
             width=560,
             height=200,
-            wrap="none",  # Prevent wrapping
+            wrap="none",
             font=("Consolas", 10),
         )
         self.console_output.pack(pady=10, padx=10)
         self.console_output.insert("end", "Ready to install Fluentix...\n")
-        self.console_output.configure(state="disabled")  # Disable editing
+        self.console_output.configure(state="disabled")
 
-        # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self, width=560)
         self.progress_bar.pack(pady=10, padx=10)
-        self.progress_bar.set(0)  # Initialize progress to 0
+        self.progress_bar.set(0)
 
-        # Reset progress variables and enable updating.
         self.current_progress = 0.0
         self.progress_updating = True
 
@@ -196,9 +185,10 @@ SOFTWARE.""",
         self.install_button.configure(state="disabled")
         self.status_label.configure(text="Installing Fluentix... Please wait.")
 
-        # Run the installation process in a separate thread to keep the UI responsive.
         threading.Thread(target=self.run_inst_thread, daemon=True).start()
-
+        
+# multithreading part written by chatgpt cuz i am not skilled enough to do this lmfao
+    
     def run_inst_thread(self):
         """Run the installation process in a separate thread."""
         try:
