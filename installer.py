@@ -14,7 +14,9 @@ class FluentixInstallerApp(ctk.CTk):
         self.geometry("600x475")
 
         self.eula_acpt = False
+        # This will keep track of our current progress value for smooth animation.
         self.current_progress = 0.0
+        # Flag to control whether the progress bar should continue updating.
         self.progress_updating = True
 
         self.disp_eula()
@@ -26,28 +28,31 @@ class FluentixInstallerApp(ctk.CTk):
     def disp_eula(self):
         """Display the EULA acceptance screen."""
         self.cls_window()
-        
+
+        # Welcome Label
         self.label = ctk.CTkLabel(
             self,
             text="Welcome to Fluentix!",
-            font=("Segoe UI", 20),
+            font=("Corbel", 20),
             justify="center",
         )
         self.label.pack(pady=10)
 
+        # Discord Info Label
         self.label = ctk.CTkLabel(
             self,
             text="Join our Discord server (fluentix.dev/discord) for news and updates!",
-            font=("Segoe UI", 15),
+            font=("Corbel", 15),
             justify="center",
         )
         self.label.pack(pady=10)
-        
+
+        # EULA Textbox
         self.eula_tbox = ctk.CTkTextbox(
             self,
             width=560,
             height=200,
-            wrap="none",
+            wrap="none",  # Prevent wrapping
             font=("Consolas", 12),
         )
         self.eula_tbox.pack(pady=10, padx=10)
@@ -73,8 +78,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.""",
         )
-        self.eula_tbox.configure(state="disabled")
+        self.eula_tbox.configure(state="disabled")  # Disable editing
 
+        # Appearance Mode Option Menu
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(
             self,
             values=["Light", "Dark", "System"],
@@ -82,6 +88,7 @@ SOFTWARE.""",
         )
         self.appearance_mode_optionemenu.pack(pady=10)
 
+        # EULA Acceptance Checkbox
         self.acp_var = ctk.BooleanVar()
         self.eula_checkbox = ctk.CTkCheckBox(
             self,
@@ -92,6 +99,7 @@ SOFTWARE.""",
         )
         self.eula_checkbox.pack(pady=10)
 
+        # Next Button
         self.next_button = ctk.CTkButton(
             self,
             text="Next",
@@ -114,7 +122,7 @@ SOFTWARE.""",
         self.label = ctk.CTkLabel(
             self,
             text="Fluentix Installer",
-            font=("Segoe UI", 20),
+            font=("Corbel", 20),
             justify="center",
         )
         self.label.pack(pady=20)
@@ -122,7 +130,7 @@ SOFTWARE.""",
         self.instruction_label = ctk.CTkLabel(
             self,
             text="Click the button below to start installing Fluentix.",
-            font=("Segoe UI", 14),
+            font=("Corbel", 14),
             justify="center",
         )
         self.instruction_label.pack(pady=10)
@@ -134,28 +142,31 @@ SOFTWARE.""",
         )
         self.install_button.pack(pady=20)
 
+        # Console output box
         self.console_output = ctk.CTkTextbox(
             self,
             width=560,
             height=200,
-            wrap="none",
+            wrap="none",  # Prevent wrapping
             font=("Consolas", 10),
         )
         self.console_output.pack(pady=10, padx=10)
-        self.console_output.insert("end", "Ready to install Fluentix...\n")
-        self.console_output.configure(state="disabled")
+        self.console_output.insert("end", "Fluentix console\n")
+        self.console_output.configure(state="disabled")  # Disable editing
 
+        # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self, width=560)
         self.progress_bar.pack(pady=10, padx=10)
-        self.progress_bar.set(0)
+        self.progress_bar.set(0)  # Initialize progress to 0
 
+        # Reset progress variables and enable updating.
         self.current_progress = 0.0
         self.progress_updating = True
 
         self.status_label = ctk.CTkLabel(
             self,
             text="",
-            font=("Segoe UI", 12),
+            font=("Corbel", 12),
             text_color="yellow",
         )
         self.status_label.pack(pady=10)
@@ -167,7 +178,7 @@ SOFTWARE.""",
         self.error_label = ctk.CTkLabel(
             self,
             text=error_message,
-            font=("Segoe UI", 14),
+            font=("Corbel", 14),
             text_color="red",
             justify="center",
         )
@@ -185,10 +196,9 @@ SOFTWARE.""",
         self.install_button.configure(state="disabled")
         self.status_label.configure(text="Installing Fluentix... Please wait.")
 
+        # Run the installation process in a separate thread to keep the UI responsive.
         threading.Thread(target=self.run_inst_thread, daemon=True).start()
-        
-# multithreading part written by chatgpt cuz i am not skilled enough to do this lmfao
-    
+
     def run_inst_thread(self):
         """Run the installation process in a separate thread."""
         try:
@@ -220,28 +230,32 @@ SOFTWARE.""",
         )
 
     def run_installation_script(self):
-        """Execute the Fluentix installation process."""
-        install_commands = [
-            'curl -L -o fluentix.zip https://github.com/Fluentix-dev/Fluentix/archive/refs/heads/main.zip',
-            'tar -xf fluentix.zip',
-            'cd Fluentix-main && py setup.py install',
-        ]
+        """Execute the Fluentix installation process in a single command."""
+        command = (
+            'mkdir "C:\\Program Files (x86)\\Fluentix" && '
+            'cd "C:\\Program Files (x86)\\Fluentix" && '
+            'curl -L -o fluentix.zip https://github.com/Fluentix-dev/Fluentix/archive/refs/heads/main.zip && '
+            'tar -xf fluentix.zip && '
+            'cd Fluentix-main && py setup.py install'
+        )
 
-        total_steps = len(install_commands)
-        step = 1
+        self.log_to_console(f"Running installation...\n")
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-        for command in install_commands:
-            self.log_to_console(f"Running: {command}\n")
-            result = subprocess.run(command, shell=True, capture_output=True, text=True)
-            if result.returncode != 0:
-                self.log_to_console(f"Error: {result.stderr}\n", error=True)
-                raise Exception(f"Error during installation: {result.stderr}")
+        if result.returncode != 0:
+            self.log_to_console(f"Error: {result.stderr}\n", error=True)
+            raise Exception(f"Installation failed: {result.stderr}")
 
-            self.log_to_console(result.stdout)
-            # Animate progress smoothly from the current progress to the new target value.
-            target_progress = step / total_steps
-            self.animate_progress_to(target_progress)
-            step += 1
+        self.log_to_console(result.stdout)
+
+        # Animate to 100% progress
+        self.animate_progress_to(1)
+        self.after(500, self.force_progress_bar_end)
+        self.after(0, lambda: self.status_label.configure(
+            text="Installation complete! Fluentix is ready to use.",
+            text_color="green"
+        ))
+        self.after(0, self.update_to_exit_button)
 
     def animate_progress_to(self, target):
         """
@@ -274,18 +288,18 @@ SOFTWARE.""",
 
     def force_progress_bar_end(self):
         """Disable further updates and force the progress bar to 100%."""
-        self.progress_updating = False  # Disable further progress updates.
+        self.progress_updating = False
         self.current_progress = 1.0
         self.progress_bar.set(1.0)
 
     def log_to_console(self, message, error=False):
         """Log a message to the console output box."""
-        self.console_output.configure(state="normal")  # Enable editing to insert text.
+        self.console_output.configure(state="normal")
         if error:
             message = f"[ERROR] {message}"
         self.console_output.insert("end", message)
         self.console_output.see("end")  # Scroll to the end.
-        self.console_output.configure(state="disabled")  # Disable editing again.
+        self.console_output.configure(state="disabled"
 
     def cls_window(self):
         """Clear all widgets from the window."""
