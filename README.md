@@ -1,9 +1,5 @@
 # Flu: v0.0.1 pre-alpha
 
-[![N|Solid](https://cdn.prod.website-files.com/674856bff10105193a1e4dd4/6748583d409715928ff42120_Fluentix-white.png)](https://Fluentix.dev)
-
-**Below is a poorly made documentation, please stay tuned because Flu project is still in very early development.**
-
 ---
 
 ## Features (at this moment):
