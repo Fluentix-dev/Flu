@@ -1,25 +1,23 @@
-# fluentix: v0.0.1 pre-alpha
+# Flu: v0.0.1 pre-alpha
 
-Official fluentix's repo.
+[![N|Solid](https://cdn.prod.website-files.com/674856bff10105193a1e4dd4/6748583d409715928ff42120_Fluentix-white.png)](https://Fluentix.dev)
 
-[![N|Solid](https://cdn.prod.website-files.com/674856bff10105193a1e4dd4/6748583d409715928ff42120_fluentix-white.png)](https://fluentix.dev)
-
-**Below is a poorly made documentation, please stay tuned because Fluentix project is still in very early development.**
+**Below is a poorly made documentation, please stay tuned because Flu project is still in very early development.**
 
 ---
 
 ## Features (at this moment):
 
-Features that Fluentix has.
+Features that Flu has.
 
-### Fluentix Language
+### Flu Language
 
 - Variables declarations
 - Equations solved
 - `Show` (print) function
 - `Input` / `ask` functiom
 
-### Fluentix Syntax
+### Flu Syntax
 
 **Data types**
 
@@ -52,38 +50,38 @@ To update a variable, we use: `<var_name> is now <value>`
 
 Way number 1, 2, 4, 6 creates a mutable variable while way number 3, 5, 7 creates a constant.
 
-### Fluentix Console
+### Flu Console
 
-- Run: Run fluentix files (using current Fluentix Language available features)
-- Packages: Will install addons for your Fluentix (still, WIP)
-  + Download (will have install when the Fluentix Language has that function)
+- Run: Run Flu files (using current Flu Language available features)
+- Packages: Will install addons for your Flu (still, WIP)
+  + Download (will have install when the Flu Language has that function)
   + Reinstall (just remove that package and install it again)
   + Uninstall (remove that package)
-  + Upload (Upload your packages: now just upload a dir, will be specified when Fluentix Language is finished; verify needs email)
+  + Upload (Upload your packages: now just upload a dir, will be specified when Flu Language is finished; verify needs email)
   + Manage (Manages your uploaded packages; verify needs email)
 - Alias: run long commands shorter
 
 ---
 
-## Get Fluentix:
+## Get Flu:
 
-Get Fluentix via those ways:
+Get Flu via those ways:
 
 ### 1. All-in-one installer (coming soon)
 
-It will be available in the future. http://fluentix.dev/downloads
+It will be available in the future. http://Fluentix.dev/downloads
 
 ### 2. Python
 
-Install this zip, launch cmd/terminal and get into Fluentix's directory, unzip it and run the `setup.py` file with administration priveliges (mac: `sudo python setup.py` or windows (admin cmd): `python setup.py`)
+Install this zip, launch cmd/terminal and get into Flu's directory, unzip it and run the `setup.py` file with administration priveliges (mac: `sudo python setup.py` or windows (admin cmd): `python setup.py`)
 
-If no errors occured, you have successfully installed Fluentix!
+If no errors occured, you have successfully installed Flu!
 
-Start using it by typing `fluentix` (`flu` or `fl` for short)
+Start using it by typing `Flu` (`flu` or `fl` for short)
 
 ## VS-Code:
 
-Official syntax for Fluentix is at https://marketplace.visualstudio.com/manage/publishers/fluentix/extensions/fluentix/hub?_a=acquisition
+Official syntax for Flu is at https://marketplace.visualstudio.com/manage/publishers/Fluentix/extensions/Fluentix/hub?_a=acquisition
 
 ---
 
